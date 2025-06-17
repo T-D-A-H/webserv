@@ -18,23 +18,23 @@ enum BracketState
 
 struct LocationConfig
 {
-    std::string path;
-    std::string root;
-    std::string index;
-    std::set<std::string> methods;
-    bool auto_index = false;
-    std::string redirect;
-    std::string cgi_extension;
-    std::string upload_store;
+    std::string             path;
+    std::string             root;
+    std::string             index;
+    std::set<std::string>   methods;
+    bool                    auto_index = false;
+    std::string             redirect;
+    std::string             cgi_extension;
+    std::string             upload_store;
 };
 
 struct ServerConfig
 {
-    std::string host;
-    int         port;
-    std::vector<std::string> server_names;
-    std::map<int, std::string> error_pages;
-    size_t client_max_body_size = 1 * 1024 * 1024;
+    std::string                 host;
+    int                         port;
+    std::vector<std::string>    server_names;
+    std::map<int, std::string>  error_pages;
+    size_t                      client_max_body_size = 1 * 1024 * 1024;
     std::vector<LocationConfig> locations;
 };
 

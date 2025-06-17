@@ -106,8 +106,8 @@ void    ConfigParser::parseFile(const std::string& filename) {
             server_bracket = B_OPEN;
         }
         if (line.find("listen") == 0) {
-            line = trim(line);
             line = line.substr(6);
+            line = trim(line);
             if (line.back() == ';')
                 line.pop_back();
             std::vector<std::string> parts = split(line, ':');
@@ -121,8 +121,8 @@ void    ConfigParser::parseFile(const std::string& filename) {
             }
         }
         else if (line.find("server_name") == 0) {
-            line = trim(line);
             line = line.substr(11);
+            line = trim(line);
             if (line.back() == ';')
                 line.pop_back();
 
@@ -133,13 +133,37 @@ void    ConfigParser::parseFile(const std::string& filename) {
             }
         }
         else if (line.find("client_max_body_size") == 0) {
-            line = trim(line);
             line = line.substr(std::string("client_max_body_size").length());
+            line = trim(line);
             if (!line.empty() && line.back() == ';')
                 line.pop_back();
             server.client_max_body_size = convertValueToBytes(line);
         }
-        
+        else if (line.find("error_page") == 0) {
+            line = line.substr(std::string("error_page").length());
+            line = trim(line);
+            if (!line.empty() && line.back() == ';')
+                line.pop_back();
+            std::istringstream iss(line);
+            int error_code;
+            std::string path;
+            while (iss >> error_code >> path) {
+                server.error_pages[error_code] = path;
+                break ;
+            }
+        }
+        else if (line.find("location") == 0) {
+            LocationConfig loc;
+            BracketState loc_bracket = B_DEFAULT;
+            line = line.substr(std::string("location").length());
+            line = trim(line);
+            size_t pos = line.find(' ');
+            if (pos != std::string::npos)
+                loc.path = line.substr(0, pos);
+            else
+                loc.path = line;
+
+        }
     }
 
 }
