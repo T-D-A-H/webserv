@@ -2,14 +2,15 @@
 #include "../includes/ConfigParser.hpp"
 
 
-int main() {
-
-    try {
+int main(void)
+{
+    try
+    {
         ConfigParser parser("webserv.conf");
-        parser.printParsedConfig(parser.getServers());
-
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         std::cerr << "Error: " << e.what() << std::endl;
     }
-    return 0;
+    return (0);
 }

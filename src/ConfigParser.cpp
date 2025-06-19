@@ -8,6 +8,8 @@ ConfigParser::ConfigParser(const std::string& filename) {
 
     ConfigParser::parseFile(filename, vars);
     ConfigParser::parseConfigFile(vars);
+
+    ConfigParser::printParsedConfig(this->getServers());
 }
 
 ConfigParser::ConfigParser(const ConfigParser& src) {*this = src;}
@@ -40,7 +42,28 @@ void    ConfigParser::parseFile(const std::string& filename, ParserVariables& va
     config_file.close();
     vars.config_array =  ConfigParser::split(buffer, ' ');
 }
+bool isMisconfiguredLocation(std::string token) {
 
+    if (token.find("{") != std::string::npos)
+        return (true);
+    if (token.find("}") != std::string::npos)
+        return (true);
+    if (token.find("upload_store") != std::string::npos)
+        return (true);
+    if (token.find("cgi_ext") != std::string::npos)
+        return (true);
+    if (token.find("return") != std::string::npos)
+        return (true);
+    if (token.find("autoindex") != std::string::npos)
+        return (true);
+    if (token.find("methods") != std::string::npos)
+        return (true);
+    if (token.find("root") != std::string::npos)
+        return (true);
+    if (token.find("index") != std::string::npos)
+        return (true);
+    return (false);
+}
 
 void    ConfigParser::parseConfigFile(ParserVariables& vars) {
 
@@ -65,18 +88,23 @@ void    ConfigParser::parseConfigFile(ParserVariables& vars) {
 
             if (vars.token == "root")
                 ConfigParser::rootToken(vars);
-            if (vars.token == "index")
+            else if (vars.token == "index")
                 ConfigParser::indexToken(vars);
-            if (vars.token == "methods")
+            else if (vars.token == "methods")
                 ConfigParser::methodsToken(vars);
-            if (vars.token == "autoindex")
+            else if (vars.token == "autoindex")
                 ConfigParser::autoIndexToken(vars);
-            if (vars.token == "return")
+            else if (vars.token == "return")
                 ConfigParser::redirectToken(vars);
-            if (vars.token == "cgi_ext")
+            else if (vars.token == "cgi_ext")
                 ConfigParser::cgiExtensionToken(vars);
-            if (vars.token == "upload_store")
+            else if (vars.token == "upload_store")
                 ConfigParser::uploadStoreToken(vars);
+            else if (isMisconfiguredLocation(vars.token) == false) {
+                std::cout << "\"" << vars.token << "\"" << " <= ";
+                throw (ConfigParser::MisconfigurationException());
+            }
+            
         }
         if (vars.token.find("}") != std::string::npos && vars.in_location == true) {
 
@@ -89,15 +117,24 @@ void    ConfigParser::parseConfigFile(ParserVariables& vars) {
             this->_servers.push_back(vars.cur_server);
         }
     }
+    if (vars.in_server == true || vars.in_location == true) {
+        std::cout << "} <= Missing closing bracket " << std::endl;
+        throw (ConfigParser::MisconfigurationException());
+    }
 
 }
 
+
+
 void ConfigParser::handleBracketStack(ParserVariables& vars) {
 
-    if (vars.token.find("server") != std::string::npos && vars.token.find("server_name") == std::string::npos ) {
+    if (vars.token.find("server") != std::string::npos && vars.token.find("server_name") == std::string::npos) {
 
-        if (vars.token.find("{") != std::string::npos)
+        if (vars.in_server == true)
+            throw (ConfigParser::MisconfigurationException());
+        if (vars.token.find("{") != std::string::npos) {
             vars.in_server = true;
+        }
         else {
             vars.token = *(++vars.it);
             if (vars.token.find("{") != std::string::npos)
@@ -107,6 +144,8 @@ void ConfigParser::handleBracketStack(ParserVariables& vars) {
     }
     else if (vars.token.find("location") != std::string::npos) {
 
+        if (vars.in_location == true)
+            throw (ConfigParser::MisconfigurationException());
         std::string temp = *(++vars.it);
         vars.cur_loc = LocationConfig();
         vars.cur_loc.path = temp;
@@ -134,7 +173,6 @@ void    ConfigParser::rootToken(ParserVariables& vars) {
 
             vars.token.erase(vars.token.size() - 1);
             vars.cur_loc.root = vars.token;
-            vars.token = *(++vars.it);
         }
     }
 }
@@ -156,6 +194,7 @@ void    ConfigParser::indexToken(ParserVariables& vars) {
 void    ConfigParser::methodsToken(ParserVariables& vars) {
 
     bool    stop = false;
+
     vars.it++;
     for (; vars.it != vars.config_array.end(); ++vars.it) {
 
