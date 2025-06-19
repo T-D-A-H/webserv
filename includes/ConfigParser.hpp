@@ -13,7 +13,6 @@
 #include <cstdlib>
 
 
-
 struct LocationConfig
 {
     std::string             path;
@@ -36,27 +35,41 @@ struct ServerConfig
     std::vector<LocationConfig>                 locations;
 };
 
+struct ParserVariables
+{
+    std::string                         buffer;
+    std::vector<std::string>            config_array;
+    std::vector<std::string>::iterator  it;
+    std::string                         token;
+    bool                                in_server;
+    bool                                in_location;
+    ServerConfig                        cur_server;
+    LocationConfig                      cur_loc;
+};
+
+
 class ConfigParser
 {
     private:
         std::vector<ServerConfig>   _servers;
         std::vector<std::string>    split(const std::string& str, char delimiter);
-        std::string                 parseFile(const std::string& filename);
         std::string                 trim(const std::string& str);
-        void                        parseConfigFile(std::vector<std::string> config_array);
-        void                        handleBracketStack(std::stack<std::string>& bracket_stack, std::string token, std::string& found_del);
-        void                        listenToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, ServerConfig& cur_server);
-        void                        serverNameToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, ServerConfig& cur_server);
-        void                        clientMaxBodySizeToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, ServerConfig& cur_server);
-        void                        errorPageToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, ServerConfig& cur_server);
-        void                        uploadStoreToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, LocationConfig& cur_loc);
-        void                        cgiExtensionToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, LocationConfig& cur_loc);
-        void                        redirectToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, LocationConfig& cur_loc);
-        void                        autoIndexToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, LocationConfig& cur_loc);
-        void                        methodsToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, LocationConfig& cur_loc);
-        void                        indexToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, LocationConfig& cur_loc);
-        void                        rootToken(std::string& token, std::vector<std::string>& config_array, std::vector<std::string>::iterator& it, LocationConfig& cur_loc);
         size_t                      str_to_size_t(const std::string& s);
+        void                        parseFile(const std::string& filename, ParserVariables& vars);
+        void                        parseConfigFile(ParserVariables& vars);
+        void                        handleBracketStack(ParserVariables& vars);
+        void                        listenToken(ParserVariables& vars);
+        void                        serverNameToken(ParserVariables& vars);
+        void                        clientMaxBodySizeToken(ParserVariables& vars);
+        void                        errorPageToken(ParserVariables& vars);
+        void                        uploadStoreToken(ParserVariables& vars);
+        void                        cgiExtensionToken(ParserVariables& vars);
+        void                        redirectToken(ParserVariables& vars);
+        void                        autoIndexToken(ParserVariables& vars);
+        void                        methodsToken(ParserVariables& vars);
+        void                        indexToken(ParserVariables& vars);
+        void                        rootToken(ParserVariables& vars);
+        void                        printParsedConfig(const std::vector<ServerConfig>& servers);
 
 
     public:
@@ -70,7 +83,6 @@ class ConfigParser
         const std::vector<ServerConfig>& getServers() const;
         class MisconfigurationException: public std::exception {public: const char* what() const throw();};
         class FileOpenErrorException: public std::exception {public: const char* what() const throw();};
-
 
 };
 
