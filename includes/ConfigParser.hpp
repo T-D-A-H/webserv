@@ -52,7 +52,7 @@ class ConfigParser
 {
     private:
         std::vector<ServerConfig>   _servers;
-        std::vector<std::string>    split(const std::string& str, char delimiter);
+        std::vector<std::string>    cp_split(const std::string& str, char delimiter);
         std::string                 trim(const std::string& str);
         size_t                      str_to_size_t(const std::string& s);
         void                        parseFile(const std::string& filename, ParserVariables& vars);
@@ -70,6 +70,7 @@ class ConfigParser
         void                        indexToken(ParserVariables& vars);
         void                        rootToken(ParserVariables& vars);
         void                        printParsedConfig(const std::vector<ServerConfig>& servers);
+        bool                        isMisconfiguredLocation(std::string token);
 
 
     public:
