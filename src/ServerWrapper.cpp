@@ -32,7 +32,7 @@ size_t                  ServerWrapper::getIpCount() const {
 }
 
 
-int                     ServerWrapper::getPorts(size_t port_index) const {
+uint16_t                     ServerWrapper::getPorts(size_t port_index) const {
 
     if (!config || port_index >= config->ips_and_ports.size()) return (-1);
     return (config->ips_and_ports[port_index].second);
@@ -80,7 +80,7 @@ size_t                  ServerWrapper::getErrorPageCount() const {
 }
 
 
-size_t                  ServerWrapper::getClientMaxBodySize() const {
+unsigned long                  ServerWrapper::getClientMaxBodySize() const {
 
     if (!config) return (0);
     return (config->client_max_body_size);
@@ -204,7 +204,11 @@ std::string             ServerWrapper::getUploadStore(size_t loc_index) const {
     return (config->locations[loc_index].upload_store);
 }
 
-//JIAMEEEE-------------------------------------------------------------
+
+int                 ServerWrapper::getFD() const {
+
+    return (this->_fd);
+}
 
 void                ServerWrapper::setSocket(int _fd) {
 
@@ -279,17 +283,17 @@ struct sockaddr_in* ServerWrapper::getSockAddr() {
 
 void                ServerWrapper::setupSocket() {
 
-	_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (_fd == -1) {
+    this->_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (this->_fd == -1) {
 
 		std::cerr << "Failed to create socket. errno: " << errno << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	int opt = 1;
-	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(this->_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 
 		std::cerr << "setsockopt(SO_REUSEADDR) failed. errno: " << errno << std::endl;
-		close(_fd);
+		close(this->_fd);
 		exit(EXIT_FAILURE);
 	}
 }

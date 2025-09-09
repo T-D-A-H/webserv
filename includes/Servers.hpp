@@ -24,7 +24,6 @@ class Servers
         ServerWrapper& operator[](size_t index);
         const ServerWrapper& operator[](size_t index) const;
         size_t size() const;
-
 };
 
 #endif

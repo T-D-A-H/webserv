@@ -3,8 +3,10 @@
 #include "../includes/Servers.hpp"
 
 bool isMethodAllowed(Connection& connection, const std::string& method) {
-	const std::vector<LocationConfig>& locations = connection.getServer()->getLocations();
+
+	const std::vector<LocationConfig>& locations = connection.getServer().getLocations();
 	std::string path = connection.getHeader("Path");
+
 	for (size_t j = 0; j < locations.size(); ++j) {
 		if (path.find(locations[j].path) == 0) {
 			const std::set<std::string>& methods = locations[j].methods;
@@ -42,14 +44,15 @@ int main(int argc, char **argv)
 		,server.getHost(), AF_INET, server.getMaxClientSize());
 	server.bindAndListen();
 
+
 	while (true) 
 	{
-		Connection _connection;
-		_connection.setServer(&server);
+		Connection _connection(server);
 		if (!_connection.setConnection(server)) {
-			continue;
+			continue ;
 		}
-		std::vector<LocationConfig> locations = _connection.getServer()->getLocations();
+		
+		std::vector<LocationConfig> locations = _connection.getServer().getLocations();
 		std::string req_path = _connection.getHeader("Path");
 
 		// Buscar la location con el prefijo más largo que haga match

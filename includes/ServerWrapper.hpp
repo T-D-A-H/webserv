@@ -26,17 +26,16 @@ class ServerWrapper
         ServerWrapper& operator=(const ServerWrapper& src);
         ~ServerWrapper();
 
-
         std::string                         getIps(size_t ip_index) const;
         size_t                              getIpCount() const;
-        int                                 getPorts(size_t port_index) const;
+        uint16_t                            getPorts(size_t port_index) const;
         size_t                              getPortCount() const;
         std::string                         getServerName(size_t server_name_index) const;
         std::vector<std::string>            getServerNamesList(void) const;
         size_t                              getServerNameCount() const;
         std::string                         getErrorPages(int error_page_index) const;
         size_t                              getErrorPageCount() const;
-        size_t                              getClientMaxBodySize() const;
+        unsigned long                       getClientMaxBodySize() const;
         const std::vector<LocationConfig>&  getLocations() const;
         const LocationConfig&               getLocation(size_t loc_index) const;
         size_t                              getLocationCount() const;
@@ -69,6 +68,7 @@ class ServerWrapper
 		sa_family_t			                getSinFamily() const;
 		unsigned long		                getMaxClientSize() const;
 		struct sockaddr_in*	                getSockAddr();
+        int                                 getFD() const;
 
 
         void	                            setupSockAddr();

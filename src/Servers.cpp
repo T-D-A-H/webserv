@@ -16,9 +16,7 @@ Servers::Servers(const Servers& src) {*this = src;}
 
 Servers& Servers::operator=(const Servers& src) {(void)src; return (*this);};
 
-Servers::~Servers() {
-
-}
+Servers::~Servers() {}
 
 
 ServerWrapper& Servers::operator[](size_t index) {
@@ -43,3 +41,4 @@ size_t  Servers::size() const {
 
     return (servers.size());
 }
+

@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/09 12:25:34 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/09 15:10:27 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,57 +14,51 @@
 #define CONNECTION_HPP
 
 
-
 #define BUFFER_SIZE 1024
 
-class ServerWrapper; // forward declaration
+class ServerWrapper;
 #include "./ServerWrapper.hpp"
 #include <iostream>
 #include <map>
 #include <iosfwd>
 
-
 class Connection {
 	
 	private:
-		int _fd;
-		char _request[BUFFER_SIZE];
-		std::map<std::string, std::string> _headers;
-		std::ifstream	_file;
-		std::string		_full_path;
-		ServerWrapper*	_server;
+		int									_fd;
+		char								_request[BUFFER_SIZE];
+		std::map<std::string, std::string>	_headers;
+		std::ifstream						_file;
+		std::string							_full_path;
+		ServerWrapper&						_server;
 		
 	public:
-		Connection();
+		Connection(ServerWrapper& _server);
 	
-		void		setFd(int _fd);
-		bool		setRequest();
-		bool 		setConnection(ServerWrapper _server);
-		void		setHeader(std::string index, std::string path);
-		void		setFullPath(const std::string& full_path);
-		void		setServer(ServerWrapper* server);
+		void								setFd(int _fd);
+		bool								setRequest();
+		bool 								setConnection(ServerWrapper& _server);
+		void								setHeader(std::string index, std::string path);
+		void								setFullPath(const std::string& full_path);
 		
-		std::string		getFullPath();
-		int				getFd();
-		char*			getRequest();
-		std::string		getHeader(std::string index);
-		std::ifstream&	getFile();
-		std::string 	getContentType(const std::string& path);
-		ServerWrapper*	getServer();
+		std::string							getFullPath();
+		int									getFd();
+		char*								getRequest();
+		std::string							getHeader(std::string index);
+		std::ifstream&						getFile();
+		std::string 						getContentType(const std::string& path);
+		ServerWrapper&						getServer();
 		
-		bool		checkRequest();
-		bool		saveRequest(char *str);
-		
-		bool		receiveRequest(LocationConfig _location);
-		
-		void		sendGetResponse();
-		void		sendPostResponse();
-		// void		sendDeleteResponse();
-
-		void		send400Response(); // Línea de request mal formada
-		void		send404Response(); //  Ruta inválida o no existente
-		void		send405Response(); // Método HTTP no soportado
-		void		send505Response(); // Versión HTTP incorrecta
+		bool								checkRequest();
+		bool								saveRequest(char *str);
+		bool								receiveRequest(LocationConfig _location);
+		void								sendGetResponse();
+		void								sendPostResponse();
+		// void								sendDeleteResponse();			
+		void								send400Response(); // Línea de request mal formada
+		void								send404Response(); //  Ruta inválida o no existente
+		void								send405Response(); // Método HTTP no soportado
+		void								send505Response(); // Versión HTTP incorrecta
 		
 };
 

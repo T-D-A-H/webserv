@@ -23,7 +23,7 @@ class ConfigParser
         std::vector<ServerConfig>   _servers;
         std::vector<std::string>    cp_split(const std::string& str, char delimiter);
         std::string                 trim(const std::string& str);
-        size_t                      str_to_size_t(const std::string& s);
+        unsigned long               str_to_unsigned_long(const std::string& s);
         void                        parseFile(const std::string& filename, ParserVariables& vars);
         void                        parseConfigFile(ParserVariables& vars);
         void                        handleBracketStack(ParserVariables& vars);

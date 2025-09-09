@@ -6,16 +6,19 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/18 14:19:05 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/08 16:16:29 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/09 15:49:29 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/webserv.hpp"
 #include "../includes/Connection.hpp"
 
-bool Connection::setConnection(ServerWrapper _server) {
+bool Connection::setConnection(ServerWrapper& _server) {
+	
+
 	this->_fd = accept(_server.getSocket(), (struct sockaddr*)_server.getSockAddr(), (socklen_t*)_server.getSockAddr());
 	if ( this->_fd < 0) {
+		
 		std::cerr << "accept() failed: " << strerror(errno) << std::endl;
 	}
 	if (!setRequest()) // Recibimos la Request
@@ -26,6 +29,7 @@ bool Connection::setConnection(ServerWrapper _server) {
 }
 
 bool  Connection::setRequest() {
+	
 	int bytes_received = recv(getFd(), _request, sizeof(_request) - 1, 0);
 	if (bytes_received < 0) {
 		std::cerr << "Error in recv()" << std::endl;
@@ -36,6 +40,7 @@ bool  Connection::setRequest() {
 }
 
 bool Connection::saveRequest(char *request) {
+	
 	std::cout << "REQUEST\n" << std::endl;
 	std::cout << "\033[32m" << request << "\033[0m" << std::endl;
 
@@ -116,7 +121,6 @@ bool Connection::receiveRequest(LocationConfig _location) {
 
     // Si la ruta es exactamente igual a la location o termina con '/'
     if (req_path == _location.path || req_path == _location.path + "/") {
-		
         relative_path = _location.indices[0];  // "index.html" ARREGLAR LUEGO PARA MULTIPLES INDICES
     } else {
         // Obtener la parte después de "/index"

@@ -9,7 +9,8 @@ ConfigParser::ConfigParser(const std::string& filename) {
     parseFile(filename, vars);
     parseConfigFile(vars);
     
-    printParsedConfig(_servers);
+    // descomentar para imprimar datos
+    // printParsedConfig(_servers);
 }
 
 ConfigParser::ConfigParser(const ConfigParser& src) {*this = src;}
@@ -279,7 +280,7 @@ void ConfigParser::clientMaxBodySizeToken(ParserVariables& vars) {
         vars.token.erase(vars.token.size() - 1);
     size_t len = vars.token.size();
     char c = vars.token[len - 1];
-    size_t multiplier = 1;
+    unsigned long multiplier = 1;
     std::string number_part = vars.token;
 
     if (c == 'K' || c == 'k') {
@@ -294,7 +295,7 @@ void ConfigParser::clientMaxBodySizeToken(ParserVariables& vars) {
         multiplier = 1024ULL * 1024ULL * 1024ULL;
         number_part = vars.token.substr(0, len - 1);
     }
-    vars.cur_server.client_max_body_size = str_to_size_t(number_part) * multiplier;
+    vars.cur_server.client_max_body_size = str_to_unsigned_long(number_part) * multiplier;
 }
 
 
@@ -374,10 +375,10 @@ std::vector<std::string> ConfigParser::cp_split(const std::string& str, char del
 }
 
 
-size_t      ConfigParser::str_to_size_t(const std::string& s) {
+unsigned long      ConfigParser::str_to_unsigned_long(const std::string& s) {
 
-    std::istringstream iss(s);
-    size_t result;
+    std::stringstream iss(s);
+    unsigned long result;
 
     iss >> result;
     return (result);
@@ -417,7 +418,6 @@ const char* ConfigParser::FileOpenErrorException::what() const throw() {
 
     return ("Failed opening config file");
 }
-
 
 
 void        ConfigParser::printParsedConfig(const std::vector<ServerConfig>& servers) {
