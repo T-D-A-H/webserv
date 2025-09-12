@@ -10,17 +10,15 @@ void        ErrorResponse::send(int fd, Connection& _connection, int error_code,
     std::string file = _connection.getServer().getErrorFile(error_code).c_str();
     std::string full_path = root + file;
 
-    std::cout << root << std::endl;
     if (isDirectory(root.c_str())) { 
-        std::cout << "file does exist" << std::endl;
+
     	std::ifstream file(full_path.c_str(), std::ios::in | std::ios::binary);
     	if (file) {
-            std::cout << "opened the file and read into buffer" << std::endl;
     		buf << file.rdbuf();
     		body = buf.str();
     	}
     } else {
-            std::cout << "sending default ting" << std::endl;
+
             buf << "<!DOCTYPE html><html><head><title>" << status << "</title></head>"
             << "<body><h1>" << status << "</h1></body></html>";	
             body = buf.str();
