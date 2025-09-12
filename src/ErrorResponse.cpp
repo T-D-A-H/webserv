@@ -9,6 +9,7 @@ void        ErrorResponse::send(int fd, Connection& _connection, int error_code,
     std::string root = _connection.getServer().getErrorRoot(error_code).c_str();
     std::string file = _connection.getServer().getErrorFile(error_code).c_str();
     std::string full_path = root + file;
+    int         error = 1;
 
     if (isDirectory(root.c_str())) { 
 
@@ -16,8 +17,10 @@ void        ErrorResponse::send(int fd, Connection& _connection, int error_code,
     	if (file) {
     		buf << file.rdbuf();
     		body = buf.str();
+            error = 0;
     	}
-    } else {
+    }
+    if (error ==  1) {
 
             buf << "<!DOCTYPE html><html><head><title>" << status << "</title></head>"
             << "<body><h1>" << status << "</h1></body></html>";	

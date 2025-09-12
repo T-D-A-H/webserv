@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/11 17:42:50 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/12 14:36:31 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,11 +46,10 @@ class Connection {
 		void								sendGetResponse();
 		void								sendPostResponse();
 		void								SendAutoResponse(const std::string &direction_path);
+		
 		void								setFd(int _fd);
 		void								setHeader(std::string index, std::string path);
 		void								setFullPath(const std::string& full_path);
-		
-		
 		std::string							getFullPath();
 		int									getFd();
 		char*								getRequest();
@@ -60,11 +59,27 @@ class Connection {
 		bool								checkRequest();
 		ssize_t								getBestMatch(ServerWrapper& server, std::string req_path);
 		bool								isMethodAllowed(Connection& connection, const std::string& method);
-		void								send400Response(); // Línea de request mal formada
-		void								send403Response(); //Acceso Denegado
-		void								send404Response(); //  Ruta inválida o no existente
-		void								send405Response(); // Método HTTP no soportado
-		void								send505Response(); // Versión HTTP incorrecta
+		
+		
+		void								send200Response();
+		void								send201Response();
+		void								send204Response();
+		void								send301Response();
+		void								send302Response();
+		void								send400Response();
+		void								send401Response();
+		void								send403Response();
+		void								send404Response();
+		void								send405Response();
+		void								send413Response();
+		void								send414Response();
+		void								send500Response();
+		void								send501Response();
+		void								send502Response();
+		void								send503Response();
+		void								send504Response();
+		void								send505Response();
+
 		// void								sendDeleteResponse();	
 		
 		
