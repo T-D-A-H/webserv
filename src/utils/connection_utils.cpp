@@ -28,12 +28,12 @@ bool			fileExistsAndReadable(const char* path) {
         // No es un archivo regular
         return (false);
     }
-    FILE* f = fopen(path, "r"); // CAMBIAR A OPEN
-    if (!f) {
+    int fd = open(path, O_RDONLY); // CAMBIAR A OPEN
+    if (fd == -1) {
         // No se puede abrir para lectura (sin permiso)
         return (false);
     }
-    fclose(f);// CAMBIAR A CLOSE
+    close(fd);// CAMBIAR A CLOSE
     return (true);
 }
 

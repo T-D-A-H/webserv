@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:19:49 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/12 14:28:36 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/12 15:32:55 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,11 +37,11 @@ bool			Connection::setConnection(ServerWrapper& _server) {
 
 bool			Connection::receiveRequest(ssize_t location_index) {
 	
-    std::string req_path = _headers["Path"]; // Ej: "/index/estilos.css"
-	ServerWrapper& server = this->_server;
-	LocationConfig _location = server.getLocation(location_index);
-    std::string root = _location.root;       // "www/"
-    std::string relative_path;
+    std::string		req_path = _headers["Path"]; // Ej: "/index/estilos.css"
+	ServerWrapper&	server = this->_server;
+	LocationConfig	_location = server.getLocation(location_index);
+    std::string		root = _location.root;       // "www/"
+    std::string		relative_path;
 
     // Si la ruta es exactamente igual a la location o termina con '/'
     if (req_path == server.getLocationPath(location_index) || req_path == server.getLocationPath(location_index) + "/") {
@@ -351,41 +351,41 @@ void			Connection::setHeader(std::string index,std::string value) {this->_header
 
 void			Connection::setFullPath(const std::string& full_path) {this->_full_path = full_path;}
 
-void    Connection::send200Response() { ErrorResponse::send200(getFd(), *this); }
+void			Connection::send200Response() { ErrorResponse::send200(getFd(), *this); }
 
-void    Connection::send201Response() { ErrorResponse::send201(getFd(), *this); }
+void			Connection::send201Response() { ErrorResponse::send201(getFd(), *this); }
 
-void    Connection::send204Response() { ErrorResponse::send204(getFd(), *this); }
+void			Connection::send204Response() { ErrorResponse::send204(getFd(), *this); }
 
-void    Connection::send301Response() { ErrorResponse::send301(getFd(), *this); }
+void			Connection::send301Response() { ErrorResponse::send301(getFd(), *this); }
 
-void    Connection::send302Response() { ErrorResponse::send302(getFd(), *this); }
+void			Connection::send302Response() { ErrorResponse::send302(getFd(), *this); }
 
-void    Connection::send400Response() { ErrorResponse::send400(getFd(), *this); }
+void			Connection::send400Response() { ErrorResponse::send400(getFd(), *this); }
 
-void    Connection::send401Response() { ErrorResponse::send401(getFd(), *this); }
+void			Connection::send401Response() { ErrorResponse::send401(getFd(), *this); }
 
-void    Connection::send403Response() { ErrorResponse::send403(getFd(), *this); }
+void			Connection::send403Response() { ErrorResponse::send403(getFd(), *this); }
 
-void    Connection::send404Response() { ErrorResponse::send404(getFd(), *this); }
+void			Connection::send404Response() { ErrorResponse::send404(getFd(), *this); }
 
-void    Connection::send405Response() { ErrorResponse::send405(getFd(), *this); }
+void			Connection::send405Response() { ErrorResponse::send405(getFd(), *this); }
 
-void    Connection::send413Response() { ErrorResponse::send413(getFd(), *this); }
+void			Connection::send413Response() { ErrorResponse::send413(getFd(), *this); }
 
-void    Connection::send414Response() { ErrorResponse::send414(getFd(), *this); }
+void			Connection::send414Response() { ErrorResponse::send414(getFd(), *this); }
 
-void    Connection::send500Response() { ErrorResponse::send500(getFd(), *this); }
+void			Connection::send500Response() { ErrorResponse::send500(getFd(), *this); }
 
-void    Connection::send501Response() { ErrorResponse::send501(getFd(), *this); }
+void			Connection::send501Response() { ErrorResponse::send501(getFd(), *this); }
 
-void    Connection::send502Response() { ErrorResponse::send502(getFd(), *this); }
+void			Connection::send502Response() { ErrorResponse::send502(getFd(), *this); }
 
-void    Connection::send503Response() { ErrorResponse::send503(getFd(), *this); }
+void			Connection::send503Response() { ErrorResponse::send503(getFd(), *this); }
 
-void    Connection::send504Response() { ErrorResponse::send504(getFd(), *this); }
+void			Connection::send504Response() { ErrorResponse::send504(getFd(), *this); }
 
-void    Connection::send505Response() { ErrorResponse::send505(getFd(), *this); }
+void			Connection::send505Response() { ErrorResponse::send505(getFd(), *this); }
 
 
 /* void Connection::sendDeleteResponse() {
