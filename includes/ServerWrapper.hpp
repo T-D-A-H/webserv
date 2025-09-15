@@ -4,6 +4,23 @@
 
 #include "./webserv.hpp"
 
+
+struct Endpoint {
+    std::string ip;
+    uint16_t    port;
+
+    Endpoint() {}
+    Endpoint(const std::string &i, uint16_t p) : ip(i), port(p) {}
+};
+
+struct PollData {
+    int fd;
+    size_t server_index;
+
+    PollData() {}
+    PollData(int _fd, int _i) : fd(_fd), server_index(_i) {}
+};
+
 class ServerWrapper
 {
     private:
@@ -17,6 +34,8 @@ class ServerWrapper
 		unsigned long		                _client_max_body_size;     // client_max_body_size 5;
 		struct sockaddr_in	                _server_adress;            // Se construye con host, puerto y familia
 		std::vector<LocationConfig>         _locations;
+        std::vector<Endpoint>               endpoints;
+        std::vector<int>                    sockets;
 
     public:
 
@@ -26,6 +45,19 @@ class ServerWrapper
         ServerWrapper& operator=(const ServerWrapper& src);
         ~ServerWrapper();
 
+
+        void addEndpoint(const std::string &ip, uint16_t port) {
+            endpoints.push_back(Endpoint(ip, port));
+        }
+        const std::vector<Endpoint>& getEndpoints() const {
+            return endpoints;
+        }
+        void addSocket(int sock) {
+            sockets.push_back(sock);
+        }
+        const std::vector<int>& getSockets() const {
+            return sockets;
+        }
         std::string                         getIps(size_t ip_index) const;
         size_t                              getIpCount() const;
         uint16_t                            getPorts(size_t port_index) const;
@@ -51,7 +83,8 @@ class ServerWrapper
         std::string                         getRedirect(size_t loc_index) const;
         std::string                         getCgiExtensions(size_t loc_index, size_t cgi_extension_index) const;
         size_t                              getCgiExtensionCount(size_t loc_index) const;
-        std::string                         getUploadStore(size_t loc_index) const;    
+        std::string                         getUploadStore(size_t loc_index) const;
+        uint16_t                            getCountIpPorts ();
         
 
         void                                setSocket(int _fd);

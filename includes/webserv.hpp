@@ -2,7 +2,6 @@
 #define WEBSERV_HPP
 
 #define MAX_CLIENTS 100
-#define BUFFER_SIZE 1024
 
 #include <iostream>
 #include <exception>

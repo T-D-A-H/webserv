@@ -62,6 +62,10 @@ size_t                  ServerWrapper::getServerNameCount() const {
     return (config->server_names.size());
 }
 
+uint16_t            ServerWrapper::getCountIpPorts () {
+    
+    return (config->ips_and_ports.size());
+}
 
 std::string             ServerWrapper::getErrorRoot(int error_page_index) const {
 

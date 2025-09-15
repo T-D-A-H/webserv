@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:19:49 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/12 15:32:55 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/15 12:25:42 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,58 +19,67 @@ Connection::Connection(ServerWrapper& _server) : _server(_server) {
 
 Connection::~Connection() {}
 
-bool			Connection::setConnection(ServerWrapper& _server) {
-	
-	this->_fd = accept(_server.getSocket(), (struct sockaddr*)_server.getSockAddr(), (socklen_t*)_server.getSockAddr());
+bool			Connection::setConnection(ServerWrapper& _server, int listening_fd) {
+
+	std::cout << "setConnection: " <<_previus_full_path << std::endl;
+	this->_fd = accept(listening_fd, (struct sockaddr*)_server.getSockAddr(), (socklen_t*)_server.getSockAddr());
 	if ( this->_fd < 0) {
+		
 		std::cerr << "accept() failed: " << strerror(errno) << std::endl;
-		return (false);
 	}
-	if (!setRequest()) { 	 // Recibimos la Request
+	if (!setRequest()) // Recibimos la Request
 		return (false);
-	}
-	if (!saveRequest(getRequest())) {	// Guardamos la Request
+	if (!saveRequest(getRequest())) // Guardamos la Request
 		return (false);
-	}
 	return (true);
 }
-
 bool			Connection::receiveRequest(ssize_t location_index) {
 	
-    std::string		req_path = _headers["Path"]; // Ej: "/index/estilos.css"
-	ServerWrapper&	server = this->_server;
-	LocationConfig	_location = server.getLocation(location_index);
-    std::string		root = _location.root;       // "www/"
-    std::string		relative_path;
+    std::string req_path = _headers["Path"]; // Ej: "/index/estilos.css"
+	ServerWrapper& server = this->_server;
+	LocationConfig _location = server.getLocation(location_index);
+    std::string root = _location.root;       // "www/"
+    std::string relative_path;
 
     // Si la ruta es exactamente igual a la location o termina con '/'
     if (req_path == server.getLocationPath(location_index) || req_path == server.getLocationPath(location_index) + "/") {
-		
-        relative_path = _location.indices[0];  // "index.html" ARREGLAR LUEGO PARA MULTIPLES INDICES
+		if (_location.indices.size() != 0) {
+			relative_path = _location.indices[0];
+			std::cout << _location.indices[0] << std::endl;
+		} else {
+			_previus_full_path = "/";
+		}
+			
     }
 	else {
         // Obtener la parte después de "/index"
         relative_path = req_path.substr(server.getLocationPath(location_index).size());
         if (!relative_path.empty() && relative_path[0] == '/') {
-			
             relative_path.erase(0, 1);  // Quita la barra inicial
 		}
     }
-
-    // Construye la ruta completa
-    this->_full_path = root + relative_path;  // ej: "www/estilos.css" o "www/index.html"
-    // Verificar archivo
-    if (this->_file.is_open())
-        this->_file.close();
-    this->_file.clear();
 	
-	if (isDirectory(root.c_str())) {
+	_full_path = root + relative_path;
+	if (_location.indices.size() != 0) {
+		_previus_full_path = _headers["Path"];
+	}
+    // Construye la ruta completa
+	std::cout << "FULL: " << _full_path << std::endl;
+	std::cout << "PreviusRequest: " << _previus_full_path << std::endl;
+	
+    // Verificar archivo
 
+	if (isDirectory(root.c_str()) && _headers["Method"] != "POST") {
+
+		std::cout << "IT IS A DIRECTORY" << std::endl;
 		bool found_index = false;
 		for (size_t i = 0; i < server.getLocationIndexCount(location_index); i++) {
 
 			std::string index_path = root + server.getLocationIndexFile(location_index, i);
+			if (_previus_full_path == "test1/upload.html")
+				index_path = _previus_full_path;
 			if (fileExistsAndReadable(index_path.c_str())) {
+				std::cout << "FILE EXISTS AND READABLE" << std::endl;
 				found_index = true;
 				break ;
 			}
@@ -80,13 +89,15 @@ bool			Connection::receiveRequest(ssize_t location_index) {
 		else if (!found_index && server.getAutoIndex(location_index) == false)
 			return (send403Response(), false);
 	}
-    else if (!fileExistsAndReadable(_full_path.c_str()) || !checkRequest()) {
+/*     else if (!fileExistsAndReadable(_full_path.c_str()) || !checkRequest()) {
         send404Response();
         return (false);
-    }
-	this->_file.open(_full_path.c_str());
-	if (!this->_file || !checkRequest()) 
-		return (send404Response(), false);
+    } */
+	
+	_file.open(_full_path.c_str());
+		
+/* 	if (!_file || !checkRequest()) 
+		return (send404Response(), false); */
     return (true);
 }
 
@@ -123,8 +134,6 @@ bool			Connection::checkRequest() {
 }
 
 bool			Connection::saveRequest(char *request) {
-	
-	
 	std::cout << "REQUEST" << std::endl;
 	std::cout << "\033[32m" << request << "\033[0m" << std::endl;
 
@@ -148,49 +157,57 @@ bool			Connection::saveRequest(char *request) {
 		return (false);
 	}
 
+
+	std::string req_path = path;
+	ssize_t best_match = getBestMatch(_server, req_path);
+	setBestMatch(best_match);
+	
+	_headers["Method"] = method;
+	_headers["Path"] = path;
+	_headers["Version"] = version;
+
+	std::cout << "saveRequest: " <<_previus_full_path << std::endl;
+	
 	if (method == "POST") {
-		std::string body_part = full_request.substr(header_end + 4);
-		std::string boundary = "------geckoformboundaryc324ad9b46a325a07382e0f763b09062";
 
-		// 1. Buscar inicio del filename
-		size_t start_filename = body_part.find("filename=\"");
-		start_filename += 10; // saltar 'filename="'
+		// Get de Boundary
+		std::size_t content_type = full_request.find("boundary=");
+		if (content_type == std::string::npos) {
+        	std::cerr << "Error: No se encontró boundary" << std::endl;
+    	}
+		content_type += 13;
+		std::size_t content_length = full_request.find("Content-Length:");
+		std::string boundary = full_request.substr(content_type, content_length - content_type - 14);
 
-		// 2. Extraer nombre del archivo
-		size_t end_filename = body_part.find("\"", start_filename);
-		std::string filename = body_part.substr(start_filename, end_filename - start_filename);
+		// Get the name of file
+		std::size_t file_name_init = full_request.find("filename=\"");
+		file_name_init += 10;
+		std::size_t file_name_end = full_request.find("\"", file_name_init);
+		std::string filename = full_request.substr(file_name_init, file_name_end - file_name_init);
 
-		// 3. Buscar inicio del contenido
-		size_t content_start = body_part.find("\r\n\r\n", end_filename);
-		content_start += 4; // saltar los \r\n\r\n
+		// GET the content
+		std::size_t find_init_content = full_request.find("\n", file_name_end + 3);
+		find_init_content += 3;
+		std::size_t content_boundary = full_request.find(boundary, find_init_content) - 9;
 
-		size_t content_end = body_part.find(boundary, content_start); // buscar boundary final
-		if (content_end != std::string::npos) {
-			// Quitar los \r\n justo antes del boundary
-			while (content_end > content_start && 
-				(body_part[content_end - 1] == '\n' || body_part[content_end - 1] == '\r')) {
-				--content_end;
-			}
-		}
 
-		std::string file_content = body_part.substr(content_start, content_end - content_start);
-		
-		// 6. Guardar archivo en uploads/
-		std::string filepath = "uploads/" + filename;
-		
-		std::ofstream ofs(filepath.c_str(), std::ios::out | std::ios::binary);
-		if (ofs.is_open()) {
-			ofs << file_content;
-			ofs.close(); // se crea y cierra inmediatamente
-			std::cout << "Archivo creado: " << filepath << std::endl;
-		} else {
-			std::cerr << "Error al crear archivo: " << filepath << std::endl;
-		}
+		std::string content = full_request.substr(find_init_content,  content_boundary - find_init_content );
+
+		ServerWrapper& server = this->_server;
+		std::string root = server.getLocationRoot(best_match);
+
+		std::string full_path = root + filename;
+
+		std::ofstream file(full_path.c_str());
+   		if (!file) {
+			std::cerr << "No se pudo crear el archivo en: " << full_path << std::endl;
+        	return 1;
+   		}
+		file << content;
+		file.close();
 	}
 	else {
-		_headers["Method"] = method;
-		_headers["Path"] = path;
-		_headers["Version"] = version;
+		
 		while (std::getline(iss, line) && !line.empty()) {
 			if (!line.empty() && line[line.length() - 1] == '\r') {
 				line.erase(line.length() - 1);
@@ -207,12 +224,13 @@ bool			Connection::saveRequest(char *request) {
 	return (true);
 }
 
+
 void			Connection::sendGetResponse() {
 	
 	std::ostringstream body_stream;
 	body_stream << getFile().rdbuf();
 	std::string body = body_stream.str();
-
+	
 	std::ostringstream oss;
 	oss << "HTTP/1.1 200 OK\r\n";
 	oss << "Content-Type: " << getContentType(_full_path) << "\r\n";
@@ -228,15 +246,16 @@ void			Connection::sendGetResponse() {
 void			Connection::sendPostResponse() {
 	
 	// Procesar datos del formulario si es necesario
-	std::string nombre = getHeader("nombre");
-	std::string email = getHeader("email");
-	std::string mensaje = getHeader("mensaje");
-
+	std::ostringstream body_stream;
+	body_stream << getFile().rdbuf();
+	std::string body = body_stream.str();
+	std::cout << "PreviusRequest2: " << _previus_full_path << std::endl;
+	
 	// Redirigir al cliente a index.html
 	std::ostringstream oss;
 	oss << "HTTP/1.1 303 See Other\r\n";
-	oss << "Location: "<< getHeader("Path") << "\r\n";
-	oss << "Content-Length: 0\r\n";
+	oss << "Location: "<< _previus_full_path  << "\r\n";
+	oss << "Content-Length: " << body.size() << "\r\n";
 	oss << "Connection: close\r\n\r\n";
 
 	std::string response = oss.str();
@@ -333,6 +352,8 @@ ssize_t			Connection::getBestMatch(ServerWrapper& server, std::string req_path) 
 	return (best_match);
 }
 
+ssize_t			Connection::getBestMatch() {return (_best_match);}
+
 int				Connection::getFd() {return (this->_fd);}
 
 char*			Connection::getRequest() {return (this->_request);}
@@ -344,6 +365,8 @@ std::ifstream&	Connection::getFile() {return (this->_file);}
 std::string		Connection::getFullPath() {return (this->_full_path);}
 
 ServerWrapper&	Connection::getServer() {return (this->_server);}
+
+void			Connection::setBestMatch(ssize_t _best_match) {this->_best_match = _best_match;}
 
 void			Connection::setFd(int fd) {this->_fd = fd;}
 

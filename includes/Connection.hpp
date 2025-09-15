@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/12 14:36:31 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/15 12:22:15 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 #define CONNECTION_HPP
 
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 2048
 
 class ServerWrapper;
 #include "./ServerWrapper.hpp"
@@ -25,6 +25,8 @@ class ServerWrapper;
 
 #include "ErrorResponse.hpp"
 
+extern std::string							_previus_full_path;
+
 class Connection {
 	
 	private:
@@ -34,12 +36,13 @@ class Connection {
 		std::ifstream						_file;
 		std::string							_full_path;
 		ServerWrapper&						_server;
+		ssize_t								_best_match;	
 		
 	public:
 		Connection(ServerWrapper& _server);
 		~Connection();
 	
-		bool 								setConnection(ServerWrapper& _server);
+		bool 								setConnection(ServerWrapper& _server, int listening_fd);
 		bool								receiveRequest(ssize_t location_index);
 		bool								setRequest();
 		bool								saveRequest(char *str);
@@ -47,6 +50,7 @@ class Connection {
 		void								sendPostResponse();
 		void								SendAutoResponse(const std::string &direction_path);
 		
+		void								setBestMatch(ssize_t _best_match);	
 		void								setFd(int _fd);
 		void								setHeader(std::string index, std::string path);
 		void								setFullPath(const std::string& full_path);
@@ -57,6 +61,7 @@ class Connection {
 		std::ifstream&						getFile();
 		ServerWrapper&						getServer();
 		bool								checkRequest();
+		ssize_t								getBestMatch();
 		ssize_t								getBestMatch(ServerWrapper& server, std::string req_path);
 		bool								isMethodAllowed(Connection& connection, const std::string& method);
 		
