@@ -6,34 +6,156 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:19:49 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/15 12:25:42 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/15 16:21:09 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/Connection.hpp"
 
-Connection::Connection(ServerWrapper& _server) : _server(_server) {
-	
-	this->_fd = this->_server.getFD();
-}
+Connection::Connection(ServerWrapper& _server) : _server(_server) {this->_fd = this->_server.getFD();}
 
 Connection::~Connection() {}
 
+
 bool			Connection::setConnection(ServerWrapper& _server, int listening_fd) {
 
-	std::cout << "setConnection: " <<_previus_full_path << std::endl;
 	this->_fd = accept(listening_fd, (struct sockaddr*)_server.getSockAddr(), (socklen_t*)_server.getSockAddr());
-	if ( this->_fd < 0) {
+	if (this->_fd < 0) {
 		
 		std::cerr << "accept() failed: " << strerror(errno) << std::endl;
 	}
-	if (!setRequest()) // Recibimos la Request
+	if (!recieveRequest()) // Recibimos la Request
 		return (false);
 	if (!saveRequest(getRequest())) // Guardamos la Request
 		return (false);
 	return (true);
 }
-bool			Connection::receiveRequest(ssize_t location_index) {
+
+
+bool			Connection::recieveRequest() {
+	
+	int bytes_received = recv(getFd(), this->_request, sizeof(this->_request) - 1, 0);
+	if (bytes_received < 0) {
+		std::cerr << "Error in recv()" << std::endl;
+		return (false);
+	}
+	this->_request[bytes_received] = '\0';
+	return (true);
+}
+
+
+bool			Connection::saveRequest(char *_request) {
+	
+	std::string			request(_request);
+	size_t				header_end = request.find("\r\n\r\n");
+	std::istringstream	iss (request);
+	std::string			line;
+	std::string			post_body;
+
+	if (header_end != std::string::npos) {
+		post_body = request.substr(header_end + 4);
+		request = request.substr(0, header_end);
+	}
+	else
+		return (send400Response(), false);
+
+	if (!std::getline(iss, line) || line.empty())
+		return (send400Response(), false);
+
+	std::istringstream request_line(line);
+    std::string method, path, version;
+    request_line >> method >> path >> version;
+
+    this->_headers["Method"] = method;
+    this->_headers["Path"] = path;
+    this->_headers["Version"] = version;
+
+	while (std::getline(iss, line)) {
+
+		if (!line.empty() && line[line.size() - 1] == '\r')
+    		line.erase(line.size() - 1);
+		if (line.empty())
+			break ;
+		
+		size_t	colon_pos = line.find(':');
+		if (colon_pos == std::string::npos)
+			continue ;
+		
+		std::string key = line.substr(0, colon_pos);
+		std::string value = line.substr(colon_pos + 1);
+		size_t		boundary_pos = line.find("boundary=");
+	
+			
+		if (boundary_pos != std::string::npos) {
+			
+    		size_t semicolon_pos = line.find(';', colon_pos);
+    		std::string content_type = line.substr(colon_pos + 1, semicolon_pos - (colon_pos + 1));
+    		while (!content_type.empty() && isspace(content_type[0]))
+				content_type.erase(0,1);
+    		while (!content_type.empty() && isspace(content_type[content_type.size()-1]))
+				content_type.erase(content_type.size()-1,1);
+    		this->_headers[key] = content_type;
+    		this->_headers["Boundary"] = line.substr(boundary_pos + 9);;
+		}
+		else {
+
+			while (!key.empty() && isspace(key[key.size() - 1]))
+				key.erase(key.size() - 1);
+    		while (!value.empty() && isspace(value[0]))
+				value.erase(0, 1);
+			this->_headers[key] = value;
+		}
+	}
+	if (!post_body.empty())
+		return (savePostBodyFile(post_body));
+	return (true);
+}
+
+bool	Connection::savePostBodyFile(std::string post_body) {
+
+	std::string boundary_marker = "--" + this->_headers["Boundary"];
+	std::size_t filename_pos = post_body.find("filename=\"");
+	
+	if (filename_pos == std::string::npos) {
+	    std::cerr << "Error: No filename found" << std::endl;
+	    return (false);
+	}
+	
+	filename_pos += 10;
+	std::size_t filename_end = post_body.find("\"", filename_pos);
+	std::string filename = post_body.substr(filename_pos, filename_end - filename_pos);
+	std::size_t content_start = post_body.find("\r\n\r\n", filename_end);
+	
+	if (content_start == std::string::npos) {
+	    std::cerr << "Error: Could not find start of content" << std::endl;
+	    return (false);
+	}
+
+	content_start += 4;
+	std::size_t content_end = post_body.find(boundary_marker, content_start);
+	
+	if (content_end == std::string::npos)
+	    content_end = post_body.length();
+		
+	std::string file_content = post_body.substr(content_start, content_end - content_start);
+	
+	this->_post_body = file_content;
+	this->_post_body_file_name = filename;
+	return (true);
+}
+
+void Connection::printParserHeader(void) {
+	
+    std::cout << "\033[32m -----------[REQUEST]-----------\033[0m" << std::endl << std::endl;
+    std::map<std::string, std::string>::const_iterator it;
+    for (it = this->_headers.begin(); it != this->_headers.end(); ++it) {
+        std::cout << "\033[32m[" << it->first << "] = " << it->second << "\033[0m" << std::endl;
+    }
+    std::cout << "\033[32m--------------------------------\033[0m" << std::endl;
+}
+
+
+bool			Connection::prepareRequest(ssize_t location_index) {
 	
     std::string req_path = _headers["Path"]; // Ej: "/index/estilos.css"
 	ServerWrapper& server = this->_server;
@@ -64,14 +186,12 @@ bool			Connection::receiveRequest(ssize_t location_index) {
 		_previus_full_path = _headers["Path"];
 	}
     // Construye la ruta completa
-	std::cout << "FULL: " << _full_path << std::endl;
-	std::cout << "PreviusRequest: " << _previus_full_path << std::endl;
+
 	
     // Verificar archivo
 
 	if (isDirectory(root.c_str()) && _headers["Method"] != "POST") {
 
-		std::cout << "IT IS A DIRECTORY" << std::endl;
 		bool found_index = false;
 		for (size_t i = 0; i < server.getLocationIndexCount(location_index); i++) {
 
@@ -79,7 +199,6 @@ bool			Connection::receiveRequest(ssize_t location_index) {
 			if (_previus_full_path == "test1/upload.html")
 				index_path = _previus_full_path;
 			if (fileExistsAndReadable(index_path.c_str())) {
-				std::cout << "FILE EXISTS AND READABLE" << std::endl;
 				found_index = true;
 				break ;
 			}
@@ -99,17 +218,6 @@ bool			Connection::receiveRequest(ssize_t location_index) {
 /* 	if (!_file || !checkRequest()) 
 		return (send404Response(), false); */
     return (true);
-}
-
-bool			Connection::setRequest() {
-	
-	int bytes_received = recv(getFd(), this->_request, sizeof(this->_request) - 1, 0);
-	if (bytes_received < 0) {
-		std::cerr << "Error in recv()" << std::endl;
-		return (false);
-	}
-	this->_request[bytes_received] = '\0';
-	return (true);
 }
 
 
@@ -132,98 +240,6 @@ bool			Connection::checkRequest() {
 	}
 	return (true);
 }
-
-bool			Connection::saveRequest(char *request) {
-	std::cout << "REQUEST" << std::endl;
-	std::cout << "\033[32m" << request << "\033[0m" << std::endl;
-
-	std::string full_request(request);
-	std::size_t header_end = full_request.find("\r\n\r\n");
-	if (header_end == std::string::npos) {
-		send400Response();
-		return (false);
-	}
-
-	std::string headers_part = full_request.substr(0, header_end);
-	std::string body_part = full_request.substr(header_end + 4);
-	std::istringstream iss(headers_part);
-	std::string line;
-	std::getline(iss, line);
-	std::istringstream request_line(line);
-	std::string method, path, version;
-	
-	if (!(request_line >> method >> path >> version)) {
-		send400Response();
-		return (false);
-	}
-
-
-	std::string req_path = path;
-	ssize_t best_match = getBestMatch(_server, req_path);
-	setBestMatch(best_match);
-	
-	_headers["Method"] = method;
-	_headers["Path"] = path;
-	_headers["Version"] = version;
-
-	std::cout << "saveRequest: " <<_previus_full_path << std::endl;
-	
-	if (method == "POST") {
-
-		// Get de Boundary
-		std::size_t content_type = full_request.find("boundary=");
-		if (content_type == std::string::npos) {
-        	std::cerr << "Error: No se encontró boundary" << std::endl;
-    	}
-		content_type += 13;
-		std::size_t content_length = full_request.find("Content-Length:");
-		std::string boundary = full_request.substr(content_type, content_length - content_type - 14);
-
-		// Get the name of file
-		std::size_t file_name_init = full_request.find("filename=\"");
-		file_name_init += 10;
-		std::size_t file_name_end = full_request.find("\"", file_name_init);
-		std::string filename = full_request.substr(file_name_init, file_name_end - file_name_init);
-
-		// GET the content
-		std::size_t find_init_content = full_request.find("\n", file_name_end + 3);
-		find_init_content += 3;
-		std::size_t content_boundary = full_request.find(boundary, find_init_content) - 9;
-
-
-		std::string content = full_request.substr(find_init_content,  content_boundary - find_init_content );
-
-		ServerWrapper& server = this->_server;
-		std::string root = server.getLocationRoot(best_match);
-
-		std::string full_path = root + filename;
-
-		std::ofstream file(full_path.c_str());
-   		if (!file) {
-			std::cerr << "No se pudo crear el archivo en: " << full_path << std::endl;
-        	return 1;
-   		}
-		file << content;
-		file.close();
-	}
-	else {
-		
-		while (std::getline(iss, line) && !line.empty()) {
-			if (!line.empty() && line[line.length() - 1] == '\r') {
-				line.erase(line.length() - 1);
-			}
-			size_t colon = line.find(":");
-			if (colon != std::string::npos) {
-				std::string key = line.substr(0, colon);
-				std::string value = line.substr(colon + 1);
-				value.erase(0, value.find_first_not_of(" \t"));
-				_headers[key] = value;
-			}
-		}	
-	}
-	return (true);
-}
-
 
 void			Connection::sendGetResponse() {
 	
@@ -249,7 +265,6 @@ void			Connection::sendPostResponse() {
 	std::ostringstream body_stream;
 	body_stream << getFile().rdbuf();
 	std::string body = body_stream.str();
-	std::cout << "PreviusRequest2: " << _previus_full_path << std::endl;
 	
 	// Redirigir al cliente a index.html
 	std::ostringstream oss;

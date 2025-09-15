@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 
 					if (_connection.setConnection(servers[server_idx], listening_fd)) {
 						if (_connection.getBestMatch() != -1) {
-							if (_connection.receiveRequest(_connection.getBestMatch())) {
+							if (_connection.prepareRequest(_connection.getBestMatch())) {
  								if (_connection.isMethodAllowed(_connection, _connection.getHeader("Method"))) {
 									std::string method = _connection.getHeader("Method");
 									if (method == "GET")

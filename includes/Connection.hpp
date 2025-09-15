@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/15 12:22:15 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/15 16:13:06 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 #define CONNECTION_HPP
 
 
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 6000
 
 class ServerWrapper;
 #include "./ServerWrapper.hpp"
@@ -27,12 +27,16 @@ class ServerWrapper;
 
 extern std::string							_previus_full_path;
 
+
+
 class Connection {
 	
 	private:
 		int									_fd;
 		char								_request[BUFFER_SIZE];
 		std::map<std::string, std::string>	_headers;
+		std::string							_post_body;
+		std::string							_post_body_file_name;
 		std::ifstream						_file;
 		std::string							_full_path;
 		ServerWrapper&						_server;
@@ -43,13 +47,15 @@ class Connection {
 		~Connection();
 	
 		bool 								setConnection(ServerWrapper& _server, int listening_fd);
-		bool								receiveRequest(ssize_t location_index);
-		bool								setRequest();
-		bool								saveRequest(char *str);
+		bool								prepareRequest(ssize_t location_index);
+		bool								recieveRequest();
+		bool								saveRequest(char *_request);
 		void								sendGetResponse();
 		void								sendPostResponse();
 		void								SendAutoResponse(const std::string &direction_path);
 		
+		bool								savePostBodyFile(std::string post_body);
+		void								printParserHeader(void);
 		void								setBestMatch(ssize_t _best_match);	
 		void								setFd(int _fd);
 		void								setHeader(std::string index, std::string path);
