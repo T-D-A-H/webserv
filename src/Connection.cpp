@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:19:49 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/15 16:21:09 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/16 11:29:12 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,8 +84,7 @@ bool			Connection::saveRequest(char *_request) {
 		std::string key = line.substr(0, colon_pos);
 		std::string value = line.substr(colon_pos + 1);
 		size_t		boundary_pos = line.find("boundary=");
-	
-			
+		
 		if (boundary_pos != std::string::npos) {
 			
     		size_t semicolon_pos = line.find(';', colon_pos);
@@ -261,7 +260,7 @@ void			Connection::sendGetResponse() {
 
 void			Connection::sendPostResponse() {
 	
-	// Procesar datos del formulario si es necesario
+
 	std::ostringstream body_stream;
 	body_stream << getFile().rdbuf();
 	std::string body = body_stream.str();
