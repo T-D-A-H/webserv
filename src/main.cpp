@@ -2,7 +2,7 @@
 #include "../includes/Connection.hpp"
 #include "../includes/Servers.hpp"
 
-std::string _previus_full_path = "VARIABLE NO DEFINIDA";
+std::string _previous_full_path = "VARIABLE NO DEFINIDA";
 
 void SetupAllServers(Servers& servers) {
 	for (size_t i = 0; i < servers.size(); i++) {
@@ -79,17 +79,13 @@ int main(int argc, char **argv)
 
 					if (_connection.setConnection(servers[server_idx], listening_fd)) {
 						if (_connection.prepareRequest()) {
-							if (_connection.isMethodAllowed(_connection, _connection.getHeader("Method"))) {
-								std::string method = _connection.getHeader("Method");
-								if (method == "GET")
-									_connection.sendGetResponse();
-								else if (method == "POST")
-									_connection.sendPostResponse();
-								else
-									_connection.send405Response();
-							} else {
-								_connection.send405Response();
-							}
+							
+							if (_connection.getHeader("Method") == "GET")
+								_connection.sendGetResponse();
+							else if (_connection.getHeader("Method") == "POST")
+								_connection.sendPostResponse();
+							else if (_connection.getHeader("Method") == "DELETE")
+								std::cout << "DELETE METHOD NOT SUPPORTED YET" << std::endl;
 						}
 					}
 					pollfds[i].revents = 0;

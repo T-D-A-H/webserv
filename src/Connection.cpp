@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:19:49 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/16 16:25:41 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/17 13:45:02 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,7 @@ bool			Connection::saveRequest(char *_request) {
 	std::string			post_body;
 
 	if (header_end == std::string::npos)
-		return (send400Response(), false);
+		return (sendError(400));
 		
 	post_body = request.substr(header_end + 4);
 	request   = request.substr(0, header_end);
@@ -86,6 +86,8 @@ bool			Connection::saveRequest(char *_request) {
 		if (boundary_pos == std::string::npos) {
 			
 			removeSpaces(key, value);
+			if (this->_headers.find(key) != this->_headers.end())
+    			return (sendError(400));
 			this->_headers[key] = value;
 		}
 		else {
@@ -93,7 +95,11 @@ bool			Connection::saveRequest(char *_request) {
   			size_t semicolon_pos       = line.find(';', colon_pos);
     		std::string content_type   = line.substr(colon_pos + 1, semicolon_pos - (colon_pos + 1));
 			removeSpaces(content_type, content_type);
+			if (this->_headers.find(key) != this->_headers.end())
+    			return (sendError(400));
     		this->_headers[key] = content_type;
+			if (this->_headers.find("Boundary") != this->_headers.end())
+    			return (sendError(400));
     		this->_headers["Boundary"] = line.substr(boundary_pos + 9);
 		}
 	}
@@ -157,11 +163,11 @@ bool			Connection::prepareRequest() {
 	
     if (req_path == server.getLocationPath(getBestMatch()) || req_path == server.getLocationPath(getBestMatch()) + "/") {
 		if (_location.indices.size() != 0) {
-			_previus_full_path = _headers["Path"];
+			_previous_full_path = _headers["Path"];
 			this->_full_path = root + _location.indices[0];
 		}
 		else {
-			this->_full_path = _previus_full_path;
+			this->_full_path = _previous_full_path;
 		}
     }
 	else {
@@ -178,17 +184,17 @@ bool			Connection::fileExistsAndReadable(const char* path, int mode) {
     struct stat st;
 	if (stat(path, &st) != 0) {
 		if (mode)
-        	send404Response();
+        	sendError(404);
         return (false);
     }
 	if (!S_ISREG(st.st_mode)) {
 		if (mode)
-        	send404Response();
+        	sendError(404);
         return (false);
     }
 	if (access(path, R_OK) != 0) {
 		if (mode)
-        	send403Response();
+        	sendError(403);
         return (false);
     }
     return (true);
@@ -196,8 +202,16 @@ bool			Connection::fileExistsAndReadable(const char* path, int mode) {
 
 bool			Connection::checkRequest(ServerWrapper&	server, std::string root, ssize_t best_match) {
 	
+	if (this->_headers["Method"].empty() || this->_headers["Path"].empty() || this->_headers["Version"].empty() || this->_headers["Host"].empty())
+		return (sendError(400));
+	if (!this->_headers["Method"].empty() && (this->_headers["Method"] != "GET" && this->_headers["Method"] != "POST" && this->_headers["Method"] != "DELETE"))
+		return (sendError(501));
+	if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
+		return (sendError(405));
+	if (!isValidHttpVersion(_headers["Version"]))
+		return (sendError(505));
 	if (isDirectory(root.c_str()) && this->_headers["Method"] != "POST") {
-		
+
 		bool found_index = false;
 		for (size_t i = 0; i < server.getLocationIndexCount(best_match); i++) {
 
@@ -207,17 +221,17 @@ bool			Connection::checkRequest(ServerWrapper&	server, std::string root, ssize_t
 				break ;
 			}
 		}
-		
+
 		if (!found_index && server.getAutoIndex(best_match) == true)
 			return (SendAutoResponse(root), true);
 		else if (!found_index && server.getAutoIndex(best_match) == false)
-			return (send404Response(), false);
+			return (sendError(404));
     	if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
 			return (false);
 		
 		_file.open(this->_full_path.c_str());
 		if (!_file)
-			return (send404Response(), false); 
+			return (sendError(404)); 
 
 		return (true);
 	}
@@ -226,23 +240,8 @@ bool			Connection::checkRequest(ServerWrapper&	server, std::string root, ssize_t
 	
 	_file.open(this->_full_path.c_str());
 	if (!_file) 
-		return (send404Response(), false);
+		return (sendError(404));
 	return (true);
-	// if (_headers["Host"].empty()) {
-		
-	// 	send400Response();
-	// }
-	// if (_headers["Method"] != "GET" && _headers["Method"] != "POST" && _headers["Method"] != "DELETE" ) {
-		
-	// 	send405Response();
-	// 	return (false);
-	// }
-	// if (!isValidHttpVersion(_headers["Version"])) {
-		
-	// 	std::cerr << "Unsupported HTTP version: " << _headers["Version"] << std::endl;
-	// 	send505Response();
-	// 	return (false);
-	// }
 }
 
 void			Connection::sendGetResponse() {
@@ -273,7 +272,7 @@ void			Connection::sendPostResponse() {
 	// Redirigir al cliente a index.html
 	std::ostringstream oss;
 	oss << "HTTP/1.1 303 See Other\r\n";
-	oss << "Location: "<< _previus_full_path  << "\r\n";
+	oss << "Location: "<< _previous_full_path  << "\r\n";
 	oss << "Content-Length: " << body.size() << "\r\n";
 	oss << "Connection: close\r\n\r\n";
 
@@ -287,7 +286,7 @@ void			Connection::SendAutoResponse(const std::string &direction_path) {
 
 	DIR * dir = opendir(direction_path.c_str());
 	if (!dir) {
-		send403Response();
+		sendError(403);
 		return ;
 	}
 	std::ostringstream body;
@@ -332,24 +331,43 @@ void			Connection::SendAutoResponse(const std::string &direction_path) {
     send(getFd(), response.str().c_str(), response.str().size(), 0);
 }
 
+bool		Connection::sendError(size_t error_code) {
+
+    static Handler handlers[506] = {0};
+
+    if (handlers[0] == 0) {
+        handlers[201] = &Connection::send201Response;
+        handlers[204] = &Connection::send204Response;
+        handlers[301] = &Connection::send301Response;
+        handlers[302] = &Connection::send302Response;
+        handlers[400] = &Connection::send400Response;
+        handlers[401] = &Connection::send401Response;
+        handlers[403] = &Connection::send403Response;
+        handlers[404] = &Connection::send404Response;
+        handlers[405] = &Connection::send405Response;
+        handlers[413] = &Connection::send413Response;
+        handlers[414] = &Connection::send414Response;
+        handlers[500] = &Connection::send500Response;
+        handlers[501] = &Connection::send501Response;
+        handlers[502] = &Connection::send502Response;
+        handlers[503] = &Connection::send503Response;
+        handlers[504] = &Connection::send504Response;
+        handlers[505] = &Connection::send505Response;
+    }
+    if (error_code < 506 && handlers[error_code])
+        (this->*handlers[error_code])();
+    return (false);
+}
 
 
-bool	Connection::isMethodAllowed(Connection& connection, const std::string& method) {
+bool	Connection::isMethodAllowed(ServerWrapper& server, ssize_t best_match, std::string& method) {
 	
-	const std::vector<LocationConfig>& locations = connection.getServer().getLocations();
-	std::string path = connection.getHeader("Path");
-	
-	for (size_t j = 0; j < locations.size(); ++j) {
+	if (method.empty())
+		return (false);
+	for (size_t j = 0; j < server.getMethodsSize(best_match); ++j) {
 		
-		if (path.find(locations[j].path) == 0) {
-			
-			if (locations[j].methods.empty())
-				return (true);
-			if (locations[j].methods.count(method))
-				return (true);
-			else
-				return (false);
-		}
+		if (method == server.getMethod(best_match, j))
+			return (true);
 	}
 	return (false);
 }

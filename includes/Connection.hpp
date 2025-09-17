@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/16 16:25:13 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/17 13:42:45 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,18 +16,16 @@
 
 #define BUFFER_SIZE 6000
 
-class ServerWrapper;
+#include "ErrorResponse.hpp"
 #include "./ServerWrapper.hpp"
 #include <iostream>
 #include <map>
 #include <iosfwd>
 #include <dirent.h>
+#include <functional>
 
-#include "ErrorResponse.hpp"
-
-extern std::string							_previus_full_path;
-
-
+class ServerWrapper;
+extern std::string							_previous_full_path;
 
 class Connection {
 	
@@ -40,7 +38,9 @@ class Connection {
 		std::ifstream						_file;
 		std::string							_full_path;
 		ServerWrapper&						_server;
-		ssize_t								_best_match;	
+		ssize_t								_best_match;
+
+		typedef void						(Connection::*Handler)();
 		
 	public:
 		Connection(ServerWrapper& _server);
@@ -53,7 +53,6 @@ class Connection {
 		void								sendGetResponse();
 		void								sendPostResponse();
 		void								SendAutoResponse(const std::string &direction_path);
-		
 		bool								savePostBodyFile(std::string post_body);
 		void								printParserHeader(void);
 		void								setBestMatch(ssize_t _best_match);	
@@ -69,11 +68,11 @@ class Connection {
 		bool								checkRequest(ServerWrapper&	server, std::string root, ssize_t best_match);
 		ssize_t								getBestMatch();
 		ssize_t								getBestMatch(ServerWrapper& server, std::string req_path);
-		bool								isMethodAllowed(Connection& connection, const std::string& method);
+		bool								isMethodAllowed(ServerWrapper& server, ssize_t best_match, std::string& method);		
 		bool								fileExistsAndReadable(const char* path, int mode);
 		void								removeSpaces(std::string& str1, std::string& str2);
 		
-		
+		bool								sendError(size_t error_code);
 		void								send200Response();
 		void								send201Response();
 		void								send204Response();

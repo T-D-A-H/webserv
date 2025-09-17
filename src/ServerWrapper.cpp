@@ -185,7 +185,23 @@ size_t             ServerWrapper::getRedirectCode(size_t loc_index) const {
     return (config->locations[loc_index].redirect_code);
 }
 
-std::string ServerWrapper::getMethods(size_t loc_index, size_t method_index) const {
+size_t                ServerWrapper::getMethodsSize(size_t loc_index) const {
+
+    if (!config || loc_index >= config->locations.size() || config->locations[loc_index].methods.empty())
+        return (0);
+    return (config->locations[loc_index].methods.size());
+}
+
+std::set<std::string>  ServerWrapper::getMethods(size_t loc_index) const {
+
+    static std::set<std::string> methods;
+    if (!config || loc_index >= config->locations.size())
+        return (methods);
+    methods = config->locations[loc_index].methods;
+    return (methods);
+}
+
+std::string             ServerWrapper::getMethod(size_t loc_index, size_t method_index) const {
     
     if (!config || loc_index >= config->locations.size()) return ("");
     const std::set<std::string>& methods = config->locations[loc_index].methods;
