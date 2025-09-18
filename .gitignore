@@ -3,3 +3,5 @@
 *.a
 .vscode
 webserv
+www/downloads/*
+!www/downloads/.gitkeep

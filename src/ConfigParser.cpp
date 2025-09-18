@@ -300,8 +300,8 @@ int    ConfigParser::uploadStoreToken(ParserVariables& vars) {
 }
 
 
-int    ConfigParser::errorPageToken(ParserVariables& vars) {
-
+int ConfigParser::errorPageToken(ParserVariables& vars) {
+    
     int     error_code;
     size_t  pos;
 
@@ -318,22 +318,19 @@ int    ConfigParser::errorPageToken(ParserVariables& vars) {
         else
             return (1);
 
-        pos = vars.token.find('/');
-        if (pos != std::string::npos)
-            vars.token = vars.token.substr(pos + 1);
 
-        pos = vars.token.find('/');
+        pos = vars.token.find_last_of('/');
         if (pos != std::string::npos) {
-            
             std::string root = vars.token.substr(0, pos + 1);
             std::string file = vars.token.substr(pos + 1);
             vars.cur_server.error_pages[error_code] = std::make_pair(root, file);
-        }
-        else
+        } else {
             vars.cur_server.error_pages[error_code] = std::make_pair("", vars.token);
+        }
     }
     return (0);
 }
+
 
 int     ConfigParser::clientMaxBodySizeToken(ParserVariables& vars) {
 

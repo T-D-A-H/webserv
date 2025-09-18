@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:19:49 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/18 11:49:15 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/18 13:36:59 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,35 +25,61 @@ bool			Connection::setConnection(ServerWrapper& _server, int listening_fd) {
 	}
 	if (!recieveRequest()) // Recibimos la Request
 		return (false);
-	if (!saveRequest(getRequest())) // Guardamos la Request
+	if (!saveRequest()) // Guardamos la Request
 		return (false);
 	return (true);
 }
 
 
-bool			Connection::recieveRequest() {
+bool	Connection::recieveRequest() {
 	
-	int bytes_received = recv(getFd(), this->_request, sizeof(this->_request) - 1, 0);
-	if (bytes_received < 0) {
-		std::cerr << "Error in recv()" << std::endl;
-		return (false);
-	}
-	this->_request[bytes_received] = '\0';
-	return (true);
+    _request_complete.clear();
+    char buffer[8192];
+    int bytes_received;
+    int content_length = 0;
+
+    // Leer headers + primer bloque
+    bytes_received = recv(getFd(), buffer, sizeof(buffer), 0);
+    if (bytes_received <= 0) return false;
+    _request_complete.append(buffer, bytes_received);
+
+    // Buscar Content-Length
+    size_t cl_pos = _request_complete.find("Content-Length:");
+    if (cl_pos != std::string::npos) {
+        size_t cl_end = _request_complete.find("\r\n", cl_pos);
+        std::string cl_str = _request_complete.substr(cl_pos + 15, cl_end - (cl_pos + 15));
+        content_length = atoi(cl_str.c_str());
+        std::cout << "Content-Length: " << content_length << std::endl;
+    }
+
+    size_t header_end = _request_complete.find("\r\n\r\n");
+    size_t body_received = (_request_complete.size() > header_end + 4) ? _request_complete.size() - (header_end + 4) : 0;
+	
+    // Leer todo el body en bloques
+    while ((int)body_received < content_length) {
+		
+        bytes_received = recv(getFd(), buffer, sizeof(buffer), 0);
+        if (bytes_received <= 0) break;
+        _request_complete.append(buffer, bytes_received);
+        body_received += bytes_received;
+    }
+	
+    std::cout << "Total received: " << _request_complete.size() << " bytes\n";
+    return true;
 }
 
 
-bool			Connection::saveRequest(char *_request) {
+bool			Connection::saveRequest() {
 	
-	std::string			request(_request);
+	std::string			request(_request_complete);
 	size_t				header_end = request.find("\r\n\r\n");
 	std::istringstream	iss(request);
 	std::string			line;
 	std::string			post_body;
 
+
 	if (header_end == std::string::npos)
 		return (sendError(400));
-		
 	post_body = request.substr(header_end + 4);
 	request   = request.substr(0, header_end);
 	
@@ -110,41 +136,83 @@ bool			Connection::saveRequest(char *_request) {
 	return (true);
 }
 
+std::vector<Part> parseMultipart(const std::string& body, const std::string& boundary) {
+    std::vector<Part> parts;
+    std::string delimiter = "--" + boundary;
+    std::string endDelimiter = delimiter + "--";
 
+    size_t start = 0;
+    while (true) {
+        size_t pos = body.find(delimiter, start);
+        if (pos == std::string::npos) break;
+        pos += delimiter.size();
 
-bool	Connection::savePostBodyFile(std::string post_body) {
+        // Saltar CRLF
+        if (body.substr(pos, 2) == "\r\n") pos += 2;
 
-	std::string boundary_marker = "--" + this->_headers["Boundary"];
-	std::size_t filename_pos = post_body.find("filename=\"");
-	
-	if (filename_pos == std::string::npos) {
-	    std::cerr << "Error: No filename found" << std::endl;
-	    return (false);
-	}
-	
-	filename_pos += 10;
-	std::size_t filename_end = post_body.find("\"", filename_pos);
-	std::string filename = post_body.substr(filename_pos, filename_end - filename_pos);
-	std::size_t content_start = post_body.find("\r\n\r\n", filename_end);
-	
-	if (content_start == std::string::npos) {
-	    std::cerr << "Error: Could not find start of content" << std::endl;
-	    return (false);
-	}
+        // Si encontramos el delimitador final
+        if (body.compare(pos, endDelimiter.size(), endDelimiter) == 0) break;
 
-	content_start += 4;
-	std::size_t content_end = post_body.find(boundary_marker, content_start);
-	
-	if (content_end == std::string::npos)
-	    content_end = post_body.length();
+        // Buscar fin de headers
+        size_t headerEnd = body.find("\r\n\r\n", pos);
+        if (headerEnd == std::string::npos)
+			break;
+
+			
+		std::string headers = body.substr(pos, headerEnd - pos);
+
+		// Extraer Content-Type
+		std::string content_type;
+		size_t ct_pos = headers.find("Content-Type:");
+		if (ct_pos != std::string::npos) {
+			ct_pos += 14; // salto "Content-Type:"
+			size_t ct_end = headers.find("\r\n", ct_pos);
+			if (ct_end == std::string::npos) ct_end = headers.size();
+				content_type = headers.substr(ct_pos, ct_end - ct_pos);
+
+		}
+        pos = headerEnd + 4; // saltar \r\n\r\n
+
+        // Buscar siguiente boundary
+        size_t next = body.find(delimiter, pos);
+        if (next == std::string::npos) break;
+
+        std::string content = body.substr(pos, next - pos);
+        // Eliminar CRLF final del contenido si existe
+        if (!content.empty() && content.substr(content.size()-2) == "\r\n") {
+            content.erase(content.size()-2);
+        }
 		
-	std::string file_content = post_body.substr(content_start, content_end - content_start);
-	
-	this->_post_body = file_content;
-	this->_post_body_file_name = filename;
-	return (true);
+		std::string filename;
+		size_t find_filename = headers.find("filename=");
+		if (find_filename != std::string::npos) {
+			size_t startQuote = headers.find('"', find_filename);
+			if (startQuote != std::string::npos) {
+				++startQuote;
+				size_t endQuote = headers.find('"', startQuote);
+				if (endQuote != std::string::npos) {
+					filename = headers.substr(startQuote, endQuote - startQuote);
+				}
+			}
+		}
+        Part p;
+        p.headers = headers;
+        p.content = content;
+		p.filename = filename;
+		p.content_type = content_type;
+        parts.push_back(p);
+        start = next;
+    }
+    return parts;
 }
 
+bool	Connection::savePostBodyFile(std::string post_body) {
+	this->parts = parseMultipart(
+        post_body,
+        this->_headers["Boundary"]
+    );
+	return (true);
+}
 
 
 bool			Connection::prepareRequest() {
@@ -184,13 +252,13 @@ bool			Connection::fileExistsAndReadable(const char* path, int mode) {
 	
     struct stat st;
 	if (stat(path, &st) != 0) {
-		if (mode)
-        	sendError(404);
+		// if (mode)
+        // 	sendError(404);
         return (false);
     }
 	if (!S_ISREG(st.st_mode)) {
-		if (mode)
-        	sendError(404);
+		// if (mode)
+        // 	sendError(404);
         return (false);
     }
 	if (access(path, R_OK) != 0) {
@@ -202,8 +270,8 @@ bool			Connection::fileExistsAndReadable(const char* path, int mode) {
 }
 
 bool			Connection::checkRequest(ServerWrapper&	server, std::string root, ssize_t best_match) {
-	
-	if (this->_headers["Method"].empty() || this->_headers["Path"].empty() || this->_headers["Version"].empty() || this->_headers["Host"].empty())
+
+ 	if (this->_headers["Method"].empty() || this->_headers["Path"].empty() || this->_headers["Version"].empty() || this->_headers["Host"].empty())
 		return (sendError(400));
 	if (!this->_headers["Method"].empty() && (this->_headers["Method"] != "GET" && this->_headers["Method"] != "POST" && this->_headers["Method"] != "DELETE"))
 		return (sendError(501));
@@ -221,39 +289,50 @@ bool			Connection::checkRequest(ServerWrapper&	server, std::string root, ssize_t
 		return (sendError(411));
 	if (checkContentLength(this->_headers["Content-Length"].c_str(), server.getMaxClientSize()) == -1)
 		return (sendError(413));
-	if (this->_headers["Method"] == "POST" && (!this->_headers["Content-Type"].empty() || this->_headers["Content-Type"] != "multipart/form-data"))
+	if (this->_headers["Method"] == "POST" && (this->_headers["Content-Type"].empty() || this->_headers["Content-Type"] != "multipart/form-data"))
 		return (sendError(415));
-	if (isDirectory(root.c_str()) && this->_headers["Method"] != "POST") {
+	if (this->_headers["Method"] != "POST") {
 
-		bool found_index = false;
-		for (size_t i = 0; i < server.getLocationIndexCount(best_match); i++) {
-
-			std::string found_path = root + server.getLocationIndexFile(best_match, i);
-			if (fileExistsAndReadable(found_path.c_str(), 0)) {
-				found_index = true;
-				break ;
+		if (isDirectory(root.c_str())) {
+			bool found_index = false;
+			for (size_t i = 0; i < server.getLocationIndexCount(best_match); i++) {
+			
+				std::string found_path = root + server.getLocationIndexFile(best_match, i);
+				if (fileExistsAndReadable(found_path.c_str(), 0)) {
+					found_index = true;
+					break ;
+				}
 			}
-		}
-
-		if (!found_index && server.getAutoIndex(best_match) == true)
-			return (SendAutoResponse(root), true);
-		else if (!found_index && server.getAutoIndex(best_match) == false)
-			return (sendError(404));
-    	if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
-			return (false);
 		
+			if (!found_index && server.getAutoIndex(best_match) == true)
+				return (SendAutoResponse(root), true);
+			else if (!found_index && server.getAutoIndex(best_match) == false)
+				return (sendError(404));
+    		if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
+				return (false);
+			_file.open(this->_full_path.c_str());
+			if (!_file)
+				return (sendError(404)); 
+			return (true);
+		}
+		if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
+			return (false);
 		_file.open(this->_full_path.c_str());
-		if (!_file)
-			return (sendError(404)); 
-
-		return (true);
+		if (!_file) 
+			return (sendError(404));	
 	}
-    if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
-		return (false);
-	
-	_file.open(this->_full_path.c_str());
-	if (!_file) 
-		return (sendError(404));
+	else if (this->_headers["Method"] == "POST") {
+		
+		for (size_t i = 0; i < this-> parts.size(); ++i) {
+			std::string full_path = root + this->parts[i].filename;
+			std::ofstream file_post(full_path.c_str());
+			
+			if (!file_post)
+				return (std::cerr << ERROR_CREATE_FILE << full_path << std::endl, false);
+			file_post.write(parts[i].content.data(), parts[i].content.size());
+			file_post.close();
+		}
+	}
 	return (true);
 }
 

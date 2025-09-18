@@ -29,7 +29,7 @@ void	PollConfig(Servers& servers, std::vector<PollData>& poll_data, std::vector<
     for (size_t i = 0; i < servers.size(); i++) {
 		const std::vector<int> sockets = servers[i].getSockets();
 		for (size_t j = 0; j < sockets.size(); j++) {
-			std::cout << "Socket del Server: " << i << " Con Socket: " << sockets[j] << std::endl;
+			// std::cout << "Socket del Server: " << i << " Con Socket: " << sockets[j] << std::endl;
 			poll_data.push_back(PollData(sockets[j], i));
 		}
     }
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 
 	try
 	{
-		Servers servers(argv[1]);
+		Servers servers(conf_file);
 
 		// Setup all servers
 		SetupAllServers(servers);
@@ -76,11 +76,11 @@ int main(int argc, char **argv)
 					size_t server_idx = poll_data[i].server_index;
 					int listening_fd = pollfds[i].fd;
 					Connection _connection(servers[server_idx]);
-					std::cout << "Servidor: " << server_idx << " Conectado al socket: " << listening_fd << std::endl;
+					std::cout << "\033[33mServer[" << server_idx << "]" <<" with socket: " << listening_fd << " \033[0m" <<std::endl;
 
 					if (_connection.setConnection(servers[server_idx], listening_fd)) {
 						if (_connection.prepareRequest()) {
-							
+
 							if (_connection.getHeader("Method") == "GET")
 								_connection.sendGetResponse();
 							else if (_connection.getHeader("Method") == "POST")
@@ -88,6 +88,8 @@ int main(int argc, char **argv)
 							else if (_connection.getHeader("Method") == "DELETE")
 								std::cout << "DELETE METHOD NOT SUPPORTED YET" << std::endl;
 						}
+						else
+							_connection.sendError(404);
 					}
 					pollfds[i].revents = 0;
 				}

@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/18 11:48:54 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/18 13:23:53 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,9 @@
 #define CONNECTION_HPP
 
 
-#define BUFFER_SIZE 6000
+#define BUFFER_SIZE 8192
 #define MAX_URI_SIZE 1000
+#define ERROR_CREATE_FILE "Error: Could not create file in: "
 
 #include "ErrorResponse.hpp"
 #include "./ServerWrapper.hpp"
@@ -27,18 +28,25 @@
 class ServerWrapper;
 extern std::string							_previous_full_path;
 
+struct Part {
+    std::string headers;
+    std::string content;
+    std::string filename;
+	std::string	content_type;
+};
+
 class Connection {
 	
 	private:
 		int									_fd;
 		char								_request[BUFFER_SIZE];
 		std::map<std::string, std::string>	_headers;
-		std::string							_post_body;
-		std::string							_post_body_file_name;
+		std::vector<Part>					 parts;
 		std::ifstream						_file;
 		std::string							_full_path;
 		ServerWrapper&						_server;
 		ssize_t								_best_match;
+		std::string							_request_complete;
 
 		typedef void						(Connection::*Handler)();
 		
@@ -49,7 +57,7 @@ class Connection {
 		bool 								setConnection(ServerWrapper& _server, int listening_fd);
 		bool								prepareRequest();
 		bool								recieveRequest();
-		bool								saveRequest(char *_request);
+		bool								saveRequest();
 		void								sendGetResponse();
 		void								sendPostResponse();
 		void								SendAutoResponse(const std::string &direction_path);

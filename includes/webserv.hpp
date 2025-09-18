@@ -3,7 +3,7 @@
 
 #define MAX_CLIENTS 100
 #define DEFAULT_CONF_FILE "www/default.conf"
-#define ERROR_ARGUMENTS "Error: Wrong amount of arguments.\n"
+#define ERROR_ARGUMENTS "Error: Wrong amount of arguments."
 
 #include <iostream>
 #include <exception>
