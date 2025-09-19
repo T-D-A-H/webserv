@@ -46,15 +46,27 @@ void    ConfigParser::parseFile(const std::string& filename, ParserVariables& va
 
 void    ConfigParser::parseConfigFile(ParserVariables& vars) {
 
+    vars.cur_server_index = -1;
     vars.in_location = false;
     vars.in_server = false;
+    int error_server = 0;
+    int error_loc = 0;
     for (vars.it = vars.config_array.begin(); vars.it != vars.config_array.end() ; ++vars.it) {
 
         vars.token = *vars.it;
         handleBracketStack(vars);
+        if (vars.in_location == true && (error_loc == 1 || isMisconfiguredLocation(vars))) {
+            std::cout << "[location " << vars.cur_loc.path << "] => \"" << vars.token << "\"" << " <= ";
+            throw (MisconfigurationException());
+        }
+        else if (vars.in_server == true  && vars.in_location == false && (error_server == 1 || isMisconfiguredServer(vars))) {
+            std::cout << "[server] => " << "\"" << vars.token << "\"" << " <= ";
+            throw (MisconfigurationException());
+        }
+        error_server = 0;
+        error_loc = 0;
         if (vars.in_server == true  && vars.in_location == false) {
 
-            int error_server = 0;
             if (vars.token == "listen")
                 error_server = listenToken(vars);
             else if (vars.token == "server_name")
@@ -63,14 +75,13 @@ void    ConfigParser::parseConfigFile(ParserVariables& vars) {
                 error_server = clientMaxBodySizeToken(vars);
             else if (vars.token == "error_page")
                 error_server = errorPageToken(vars);
-            if (error_server == 1) {
-                std::cout << "\"" << vars.token << "\"" << " <= ";
-                throw (MisconfigurationException());
-            }
+            // else if (vars.token == "root")
+            //     error_server = defaultRoot(vars);
+            // else if (vars.token == "index")
+            //     error_server = defaultIndex(vars);
         }
         else if (vars.in_location == true) {
 
-            int error_loc = 0;
             if (vars.token == "root")
                 error_loc = rootToken(vars);
             else if (vars.token == "index")
@@ -85,19 +96,17 @@ void    ConfigParser::parseConfigFile(ParserVariables& vars) {
                 error_loc = cgiExtensionToken(vars);
             else if (vars.token == "upload_store")
                 error_loc = uploadStoreToken(vars);
-            if (error_loc == 1) {
-                std::cout << "\"" << vars.token << "\"" << " <= ";
-                throw (MisconfigurationException());
-            }
             
         }
         if (vars.token.find("}") != std::string::npos && vars.in_location == true) {
 
+            std::cout << "bracketInLoc = " << vars.token << std::endl;
             vars.in_location = false;
             vars.cur_server.locations.push_back(vars.cur_loc);
         }
         else if (vars.token.find("}") != std::string::npos && vars.in_location == false && vars.in_server == true) {
 
+            std::cout << "bracketInServer = " << vars.token << std::endl;
             vars.in_server = false;
             this->_servers.push_back(vars.cur_server);
         }
@@ -113,11 +122,12 @@ void ConfigParser::handleBracketStack(ParserVariables& vars) {
     if (vars.token.find("server") != std::string::npos && vars.token.find("server_name") == std::string::npos) {
 
         if (vars.in_server == true) {
+            std::cout << "Unknown directive inside server[" << vars.cur_server_index << "] => \"server\" <=";
             throw (MisconfigurationException());
         }
         vars.token = *(++vars.it);
         if (vars.token.find("{") != std::string::npos) {
-
+            vars.cur_server_index++;
             vars.cur_server = ServerConfig();
             vars.in_server = true;
             vars.token = *(++vars.it);
@@ -128,12 +138,11 @@ void ConfigParser::handleBracketStack(ParserVariables& vars) {
         std::string temp = *(++vars.it);
 
         if (vars.in_location == true) {
-
+            std::cout << "[location " << vars.cur_loc.path << "] => \"" << vars.token << "\"" << " <= ";
             throw (MisconfigurationException());
         }
         vars.token = *(++vars.it);
         if (vars.token.find("{") != std::string::npos) {
-
             vars.cur_loc = LocationConfig();
             vars.in_location = true;
             vars.cur_loc.path = temp;
@@ -191,24 +200,27 @@ int    ConfigParser::indexToken(ParserVariables& vars) {
 int    ConfigParser::methodsToken(ParserVariables& vars) {
 
     int     error = 1;
+    size_t pos;
 
     vars.it++;
     for (; vars.it != vars.config_array.end(); ++vars.it) {
 
         vars.token = *vars.it;
-        if (isMisconfiguredLocation(vars.token) == true) {
-            error = 1;
-            break ;
-        }
-        size_t pos = vars.token.find(';');
+
+        pos = vars.token.find(';');
         if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';' && pos != std::string::npos) {
             error = 0;
             vars.token.erase(vars.token.size() - 1);
         }
+        if (vars.token != "POST" && vars.token != "GET" && vars.token != "DELETE") {
+            error = 1;
+            std::cout << "[location " << vars.cur_loc.path << "] => \"" << vars.token << "\"" << " <= ";
+            throw (MisconfigurationException());
+            break ;
+        }
         vars.cur_loc.methods.insert(vars.token);
         if (error == 0)
             break ;
-
     }
     return (error);
 }
@@ -234,51 +246,62 @@ int    ConfigParser::autoIndexToken(ParserVariables& vars) {
     return (0);
 }
 
-int    ConfigParser::redirectToken(ParserVariables& vars) {
+int ConfigParser::redirectToken(ParserVariables& vars) {
 
     ++vars.it;
-    if (vars.it != vars.config_array.end()) {
+    if (vars.it == vars.config_array.end())
+        return (1);
+    vars.token = *vars.it;
+    if (std::isdigit(vars.token[0])) {
 
-        vars.token = *vars.it;
         vars.cur_loc.redirect_code = std::atoi(vars.token.c_str());
+        if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';')
+            return (0);
         ++vars.it;
-        if (vars.it != vars.config_array.end()) {
-
-            vars.token = *vars.it;
-            size_t pos = vars.token.find(';');
-            if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';' && pos != std::string::npos) {
-                vars.token.erase(vars.token.size() - 1);
-            }
-            else
-                return (1);
-            vars.cur_loc.redirect = vars.token;
+        if (vars.it == vars.config_array.end())
+            return (1);
+        vars.token = *vars.it;
+        if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';') {
+            vars.token.erase(vars.token.size() - 1);
+            if (!vars.token.empty())
+                vars.cur_loc.redirect = vars.token;
+            return (0);
         }
+        vars.token = *(--vars.it);
+        return (1);
     }
-    return (0);
+    vars.cur_loc.redirect_code = 302;
+    if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';') {
+        vars.token.erase(vars.token.size() - 1);
+        vars.cur_loc.redirect = vars.token;
+        return (0);
+    }
+    return (1);
 }
+
 
 int    ConfigParser::cgiExtensionToken(ParserVariables& vars) {
 
-    int error = 1;
-    vars.it++;
+    ++vars.it;
+    if (vars.it == vars.config_array.end())
+        return (1);
     for (; vars.it != vars.config_array.end(); ++vars.it) {
 
         vars.token = *vars.it;
-        if (!vars.token.empty()) {
-            size_t semicolon_pos = vars.token.find(';');
-            if (semicolon_pos != std::string::npos) {
-                error = 0;
-                vars.token.erase(vars.token.size() - 1);
-            }
-            if (isMisconfiguredLocation(vars.token) == true && error == 1)
-                return (1);
-            vars.cur_loc.cgi_extensions.insert(vars.token);
-            if (error == 0)
-                break ;
+        if (isMisconfiguredLocation(vars) == false) {
+            vars.token = *(--vars.it);
+            return (1);
         }
+        size_t semicolon_pos = vars.token.find(';');
+        if (semicolon_pos != std::string::npos) {
+            vars.token.erase(vars.token.size() - 1);
+            if (!vars.token.empty())
+                vars.cur_loc.cgi_extensions.insert(vars.token);
+            break ;
+        }
+        vars.cur_loc.cgi_extensions.insert(vars.token);
     }
-    vars.token = *(++vars.it);
-    return (error);
+    return (0);
 }
 
 int    ConfigParser::uploadStoreToken(ParserVariables& vars) {
@@ -296,6 +319,7 @@ int    ConfigParser::uploadStoreToken(ParserVariables& vars) {
         else
             return (1);
     }
+    std::cout << "uploadStoreToken = " << vars.token << std::endl;
     return (0);
 }
 
@@ -457,36 +481,58 @@ unsigned long      ConfigParser::str_to_unsigned_long(const std::string& s) {
     return (result);
 }
 
-bool ConfigParser::isMisconfiguredLocation(std::string token) {
+bool ConfigParser::isMisconfiguredLocation(ParserVariables& vars) {
 
+    std::vector<std::string>::iterator next_it = vars.it;
+
+    if (next_it == vars.config_array.end())
+        return (false);
+    
+    std::string token = *next_it;
+    if (token == "}" || token == "{")
+        return (false);
     if (token.find("upload_store") != std::string::npos)
-        return (true);
+        return (false);
     if (token.find("cgi_ext") != std::string::npos)
-        return (true);
+        return (false);
     if (token.find("return") != std::string::npos)
-        return (true);
+        return (false);
     if (token.find("autoindex") != std::string::npos)
-        return (true);
+        return (false);
     if (token.find("methods") != std::string::npos)
-        return (true);
+        return (false);
     if (token.find("root") != std::string::npos)
-        return (true);
+        return (false);
     if (token.find("index") != std::string::npos)
-        return (true);
-    return (false);
+        return (false);
+    std::cout << "\033[32m isMisconfiguredLocation = \033[0m" << token << std::endl;
+    return (true);
 }
 
-bool ConfigParser::isMisconfiguredServer(std::string token) {
+bool ConfigParser::isMisconfiguredServer(ParserVariables& vars) {
 
-    if (token.find("error_page") != std::string::npos)
-        return (true);
-    if (token.find("client_max_body_size") != std::string::npos)
-        return (true);
-    if (token.find("listen") != std::string::npos)
-        return (true);
+    std::vector<std::string>::iterator next_it = vars.it;
+
+    if (next_it == vars.config_array.end())
+        return (false);
+    
+    std::string token = *next_it;
+    if (token == "}" || token == "{")
+        return (false);
     if (token.find("server_name") != std::string::npos)
-        return (true);    
-    return (false);
+        return (false);
+    if (token.find("error_page") != std::string::npos)
+        return (false);
+    if (token.find("client_max_body_size") != std::string::npos)
+        return (false);
+    if (token.find("listen") != std::string::npos)
+        return (false);
+    if (token.find("root") != std::string::npos)
+        return (false);
+    if (token.find("index") != std::string::npos)
+        return (false);
+    std::cout << "\033[32m isMisconfiguredServer = \033[0m" << token << std::endl;  
+    return (true);
 }
 
 const std::vector<ServerConfig>& ConfigParser::getServers() const {
@@ -497,12 +543,12 @@ const std::vector<ServerConfig>& ConfigParser::getServers() const {
 
 const char* ConfigParser::MisconfigurationException::what() const throw() {
 
-    return ("Misconfigured config file");
+    return ("\033[1;31m Misconfigured config file previous or post this.\033[0m");
 }
 
 const char* ConfigParser::FileOpenErrorException::what() const throw() {
 
-    return ("Failed opening config file");
+    return ("\033[1;31m Failed opening config file\033[0m");
 }
 
 

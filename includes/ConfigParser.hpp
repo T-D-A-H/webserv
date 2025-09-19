@@ -13,6 +13,7 @@ struct ParserVariables
     bool                                in_server;
     bool                                in_location;
     ServerConfig                        cur_server;
+    size_t                              cur_server_index;
     LocationConfig                      cur_loc;
 };
 
@@ -39,8 +40,8 @@ class ConfigParser
         int                         indexToken(ParserVariables& vars);
         int                         rootToken(ParserVariables& vars);
         void                        printParsedConfig(const std::vector<ServerConfig>& servers);
-        bool                        isMisconfiguredLocation(std::string token);
-        bool                        isMisconfiguredServer(std::string token);
+        bool                        isMisconfiguredLocation(ParserVariables& vars);
+        bool                        isMisconfiguredServer(ParserVariables& vars);
 
     public:
         ConfigParser();
