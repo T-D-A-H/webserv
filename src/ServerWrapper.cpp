@@ -183,6 +183,11 @@ std::string ServerWrapper::getLocationIndexFile(size_t loc_index, size_t index_f
     return (indices[index_file]);
 }
 
+const std::vector<std::string>&      ServerWrapper::getDefaultIndices() const {
+    
+    return (config->default_indices);
+}
+
 const std::vector<std::string>&     ServerWrapper::getLocationIndices(size_t loc_index) const {
 
     return (config->locations[loc_index].indices);

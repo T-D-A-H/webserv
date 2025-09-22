@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:19:49 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/18 14:58:43 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/09/22 16:06:19 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,39 +33,39 @@ bool			Connection::setConnection(ServerWrapper& _server, int listening_fd) {
 
 bool	Connection::recieveRequest() {
 	
-    _request_complete.clear();
-    char buffer[8192];
-    int bytes_received;
-    int content_length = 0;
+	_request_complete.clear();
+	char buffer[8192];
+	int bytes_received;
+	int content_length = 0;
 
-    // Leer headers + primer bloque
-    bytes_received = recv(getFd(), buffer, sizeof(buffer), 0);
-    if (bytes_received <= 0) return false;
-    _request_complete.append(buffer, bytes_received);
+	// Leer headers + primer bloque
+	bytes_received = recv(getFd(), buffer, sizeof(buffer), 0);
+	if (bytes_received <= 0) return false;
+	_request_complete.append(buffer, bytes_received);
 
-    // Buscar Content-Length
-    size_t cl_pos = _request_complete.find("Content-Length:");
-    if (cl_pos != std::string::npos) {
-        size_t cl_end = _request_complete.find("\r\n", cl_pos);
-        std::string cl_str = _request_complete.substr(cl_pos + 15, cl_end - (cl_pos + 15));
-        content_length = atoi(cl_str.c_str());
-        std::cout << "Content-Length: " << content_length << std::endl;
-    }
+	// Buscar Content-Length
+	size_t cl_pos = _request_complete.find("Content-Length:");
+	if (cl_pos != std::string::npos) {
+		size_t cl_end = _request_complete.find("\r\n", cl_pos);
+		std::string cl_str = _request_complete.substr(cl_pos + 15, cl_end - (cl_pos + 15));
+		content_length = atoi(cl_str.c_str());
+		std::cout << "Content-Length: " << content_length << std::endl;
+	}
 
-    size_t header_end = _request_complete.find("\r\n\r\n");
-    size_t body_received = (_request_complete.size() > header_end + 4) ? _request_complete.size() - (header_end + 4) : 0;
+	size_t header_end = _request_complete.find("\r\n\r\n");
+	size_t body_received = (_request_complete.size() > header_end + 4) ? _request_complete.size() - (header_end + 4) : 0;
 	
-    // Leer todo el body en bloques
-    while ((int)body_received < content_length) {
+	// Leer todo el body en bloques
+	while ((int)body_received < content_length) {
 		
-        bytes_received = recv(getFd(), buffer, sizeof(buffer), 0);
-        if (bytes_received <= 0) break;
-        _request_complete.append(buffer, bytes_received);
-        body_received += bytes_received;
-    }
+		bytes_received = recv(getFd(), buffer, sizeof(buffer), 0);
+		if (bytes_received <= 0) break;
+		_request_complete.append(buffer, bytes_received);
+		body_received += bytes_received;
+	}
 	
-    std::cout << "Total received: " << _request_complete.size() << " bytes\n";
-    return true;
+	std::cout << "Total received: " << _request_complete.size() << " bytes\n";
+	return true;
 }
 
 
@@ -87,17 +87,17 @@ bool			Connection::saveRequest() {
 		return (send400Response(), false);
 
 	std::istringstream request_line(line);
-    std::string method, path, version;
-    request_line >> method >> path >> version;
+	std::string method, path, version;
+	request_line >> method >> path >> version;
 
-    this->_headers["Method"]  = method;
-    this->_headers["Path"]	  = path;
-    this->_headers["Version"] = version;
+	this->_headers["Method"]  = method;
+	this->_headers["Path"]	  = path;
+	this->_headers["Version"] = version;
 
 	while (std::getline(iss, line)) {
 
 		if (!line.empty() && line[line.size() - 1] == '\r')
-    		line.erase(line.size() - 1);
+			line.erase(line.size() - 1);
 		if (line.empty())
 			break ;
 		
@@ -113,21 +113,21 @@ bool			Connection::saveRequest() {
 			
 			removeSpaces(key, value);
 			if (this->_headers.find(key) != this->_headers.end() || !isValidHeaderName(key) || !isValidHeaderValue(value))
-    			return (sendError(400));
+				return (sendError(400));
 			this->_headers[key] = value;
 		}
 		else {
 			
   			size_t semicolon_pos       = line.find(';', colon_pos);
-    		std::string content_type   = line.substr(colon_pos + 1, semicolon_pos - (colon_pos + 1));
+			std::string content_type   = line.substr(colon_pos + 1, semicolon_pos - (colon_pos + 1));
 			std::string boundary_value = line.substr(boundary_pos + 9);
 			removeSpaces(content_type, content_type);
 			if (this->_headers.find(key) != this->_headers.end() || !isValidHeaderName(key) || !isValidHeaderValue(content_type))
-    			return (sendError(400));
-    		this->_headers[key] = content_type;
+				return (sendError(400));
+			this->_headers[key] = content_type;
 			if (this->_headers.find("Boundary") != this->_headers.end() || !isValidHeaderValue(boundary_value))
-    			return (sendError(400));
-    		this->_headers["Boundary"] = boundary_value;
+				return (sendError(400));
+			this->_headers["Boundary"] = boundary_value;
 		}
 	}
 	printParserHeader();
@@ -137,25 +137,25 @@ bool			Connection::saveRequest() {
 }
 
 std::vector<Part> parseMultipart(const std::string& body, const std::string& boundary) {
-    std::vector<Part> parts;
-    std::string delimiter = "--" + boundary;
-    std::string endDelimiter = delimiter + "--";
+	std::vector<Part> parts;
+	std::string delimiter = "--" + boundary;
+	std::string endDelimiter = delimiter + "--";
 
-    size_t start = 0;
-    while (true) {
-        size_t pos = body.find(delimiter, start);
-        if (pos == std::string::npos) break;
-        pos += delimiter.size();
+	size_t start = 0;
+	while (true) {
+		size_t pos = body.find(delimiter, start);
+		if (pos == std::string::npos) break;
+		pos += delimiter.size();
 
-        // Saltar CRLF
-        if (body.substr(pos, 2) == "\r\n") pos += 2;
+		// Saltar CRLF
+		if (body.substr(pos, 2) == "\r\n") pos += 2;
 
-        // Si encontramos el delimitador final
-        if (body.compare(pos, endDelimiter.size(), endDelimiter) == 0) break;
+		// Si encontramos el delimitador final
+		if (body.compare(pos, endDelimiter.size(), endDelimiter) == 0) break;
 
-        // Buscar fin de headers
-        size_t headerEnd = body.find("\r\n\r\n", pos);
-        if (headerEnd == std::string::npos)
+		// Buscar fin de headers
+		size_t headerEnd = body.find("\r\n\r\n", pos);
+		if (headerEnd == std::string::npos)
 			break;
 
 			
@@ -171,17 +171,17 @@ std::vector<Part> parseMultipart(const std::string& body, const std::string& bou
 				content_type = headers.substr(ct_pos, ct_end - ct_pos);
 
 		}
-        pos = headerEnd + 4; // saltar \r\n\r\n
+		pos = headerEnd + 4; // saltar \r\n\r\n
 
-        // Buscar siguiente boundary
-        size_t next = body.find(delimiter, pos);
-        if (next == std::string::npos) break;
+		// Buscar siguiente boundary
+		size_t next = body.find(delimiter, pos);
+		if (next == std::string::npos) break;
 
-        std::string content = body.substr(pos, next - pos);
-        // Eliminar CRLF final del contenido si existe
-        if (!content.empty() && content.substr(content.size()-2) == "\r\n") {
-            content.erase(content.size()-2);
-        }
+		std::string content = body.substr(pos, next - pos);
+		// Eliminar CRLF final del contenido si existe
+		if (!content.empty() && content.substr(content.size()-2) == "\r\n") {
+			content.erase(content.size()-2);
+		}
 		
 		std::string filename;
 		size_t find_filename = headers.find("filename=");
@@ -195,78 +195,95 @@ std::vector<Part> parseMultipart(const std::string& body, const std::string& bou
 				}
 			}
 		}
-        Part p;
-        p.headers = headers;
-        p.content = content;
+		Part p;
+		p.headers = headers;
+		p.content = content;
 		p.filename = filename;
 		p.content_type = content_type;
-        parts.push_back(p);
-        start = next;
-    }
-    return parts;
+		parts.push_back(p);
+		start = next;
+	}
+	return parts;
 }
 
 bool	Connection::savePostBodyFile(std::string post_body) {
 	this->parts = parseMultipart(
-        post_body,
-        this->_headers["Boundary"]
-    );
+		post_body,
+		this->_headers["Boundary"]
+	);
 	return (true);
 }
 
 
 bool			Connection::prepareRequest() {
 	
-    std::string		req_path   = this->_headers["Path"];
-	ServerWrapper&	server	   = this->_server;
-	ssize_t			best_match = findBestMatch(server, req_path);
-	LocationConfig	_location  = server.getLocation(best_match);
-    std::string		root       = _location.root;
-	std::string		relative_path;
-
-	setBestMatch(best_match);
-	if (getBestMatch() == -1) {
-		std::cout << "Error Best Match" << std::endl;
-		return (false);
-	}
+	std::string				 req_path   = this->_headers["Path"];
+	ServerWrapper&			 server	   = this->_server;
+	ssize_t					 best_match = findBestMatch(server, req_path);
+	LocationConfig			 _location;
+	std::vector<std::string> index_files;
+	std::string				 root;
+	std::string				 relative_path;
 	
-    if (req_path == server.getLocationPath(getBestMatch()) || req_path == server.getLocationPath(getBestMatch()) + "/") {
-		if (_location.indices.size() != 0) {
-			_previous_full_path = _headers["Path"];
-			this->_full_path = root + _location.indices[0];
+	if (best_match == -1)
+		return (sendError(404));
+
+	_location = server.getLocation(best_match);
+	setBestMatch(best_match);
+	
+	root = _location.root.empty() ? server.getDefaultRoot() : _location.root;
+	index_files = _location.indices.empty() ? server.getDefaultIndices() : server.getLocationIndices(best_match);
+	
+	if (req_path == server.getLocationPath(getBestMatch()) || req_path == server.getLocationPath(getBestMatch()) + "/") {
+		if (index_files.size() != 0) {
+			_previous_full_path = this->_headers["Path"];
+			for (size_t i = 0; i < index_files.size(); i++) {
+				std::string found_path = root + index_files[i];
+				if (fileExistsAndReadable(found_path.c_str(), 0)) {
+					this->_full_path = found_path;
+					break ;
+				}
+			}
 		}
 		else {
 			this->_full_path = _previous_full_path;
 		}
-    }
+	}
 	else {
 		relative_path = req_path.substr(server.getLocationPath(getBestMatch()).size());
 		if (!relative_path.empty() && relative_path[0] == '/')
 			relative_path.erase(0, 1);
 		this->_full_path = root + relative_path;
 	}
+
 	return (checkRequest(server, root, best_match));
 }
 
 bool			Connection::fileExistsAndReadable(const char* path, int mode) {
-	
-    struct stat st;
+
+	if (path == NULL)
+		return (false);
+	struct stat st;
 	if (stat(path, &st) != 0) {
-		// if (mode)
-        // 	sendError(404);
-        return (false);
-    }
+		if (mode == 1) {
+			sendError(404);
+		}
+		return (false);
+	}
 	if (!S_ISREG(st.st_mode)) {
-		// if (mode)
-        // 	sendError(404);
-        return (false);
-    }
+		if (mode == 1) {
+			sendError(404);
+		}
+		return (false);
+	}
 	if (access(path, R_OK) != 0) {
-		if (mode)
-        	sendError(403);
-        return (false);
-    }
-    return (true);
+
+		if (mode == 1) {
+			sendError(403);
+		}
+		return (false);
+	}
+	return (true);
 }
 
 bool			Connection::checkRequest(ServerWrapper&	server, std::string root, ssize_t best_match) {
@@ -294,21 +311,12 @@ bool			Connection::checkRequest(ServerWrapper&	server, std::string root, ssize_t
 	if (this->_headers["Method"] != "POST") {
 
 		if (isDirectory(root.c_str())) {
-			bool found_index = false;
-			for (size_t i = 0; i < server.getLocationIndexCount(best_match); i++) {
-			
-				std::string found_path = root + server.getLocationIndexFile(best_match, i);
-				if (fileExistsAndReadable(found_path.c_str(), 0)) {
-					found_index = true;
-					break ;
-				}
-			}
-		
-			if (!found_index && server.getAutoIndex(best_match) == true)
+
+			if (this->_full_path.empty() && server.getAutoIndex(best_match) == true)
 				return (SendAutoResponse(root), true);
-			else if (!found_index && server.getAutoIndex(best_match) == false)
+			else if (this->_full_path.empty() && server.getAutoIndex(best_match) == false)
 				return (sendError(404));
-    		if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
+			if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
 				return (false);
 			_file.open(this->_full_path.c_str());
 			if (!_file)
@@ -382,81 +390,81 @@ void			Connection::SendAutoResponse(const std::string &direction_path) {
 		return ;
 	}
 	std::ostringstream body;
-    body << "<html><head><title>Index of " << _headers["Path"] << "</title></head><body>";
-    body << "<h1>Index of " << _headers["Path"] << "</h1><ul>";
+	body << "<html><head><title>Index of " << _headers["Path"] << "</title></head><body>";
+	body << "<h1>Index of " << _headers["Path"] << "</h1><ul>";
 
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != NULL) {
-        std::string name = entry->d_name;
+	struct dirent* entry;
+	while ((entry = readdir(dir)) != NULL) {
+		std::string name = entry->d_name;
 
-        // Skip "." and ".."
-        if (name == "." || name == "..")
-            continue;
+		// Skip "." and ".."
+		if (name == "." || name == "..")
+			continue;
 
-        std::string href = _headers["Path"];
-        if (href.empty() || href[href.size()-1] != '/')
-            href += "/";
-        href += name;
+		std::string href = _headers["Path"];
+		if (href.empty() || href[href.size()-1] != '/')
+			href += "/";
+		href += name;
 
-        // Check if directory to add trailing slash
-        struct stat st;
-        std::string fullPath = direction_path + "/" + name;
-        if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
-            name += "/";
-            href += "/";
-        }
+		// Check if directory to add trailing slash
+		struct stat st;
+		std::string fullPath = direction_path + "/" + name;
+		if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+			name += "/";
+			href += "/";
+		}
 
-        body << "<li><a href=\"" << href << "\">" << name << "</a></li>\n";
-    }
+		body << "<li><a href=\"" << href << "\">" << name << "</a></li>\n";
+	}
 
-    body << "</ul></body></html>";
-    closedir(dir);
+	body << "</ul></body></html>";
+	closedir(dir);
 
-    std::string bodyStr = body.str();
-    std::ostringstream response;
-    response << "HTTP/1.1 200 OK\r\n";
-    response << "Content-Type: text/html\r\n";
-    response << "Content-Length: " << bodyStr.size() << "\r\n";
-    response << "Connection: close\r\n\r\n";
-    response << bodyStr;
+	std::string bodyStr = body.str();
+	std::ostringstream response;
+	response << "HTTP/1.1 200 OK\r\n";
+	response << "Content-Type: text/html\r\n";
+	response << "Content-Length: " << bodyStr.size() << "\r\n";
+	response << "Connection: close\r\n\r\n";
+	response << bodyStr;
 
-    send(getFd(), response.str().c_str(), response.str().size(), 0);
+	send(getFd(), response.str().c_str(), response.str().size(), 0);
 }
 
 bool		Connection::sendError(size_t error_code) {
 
-    static Handler handlers[506] = {0};
+	static Handler handlers[506] = {0};
 
-    if (handlers[0] == 0) {
-        handlers[201] = &Connection::send201Response;
-        handlers[204] = &Connection::send204Response;
-        handlers[301] = &Connection::send301Response;
-        handlers[302] = &Connection::send302Response;
-        handlers[400] = &Connection::send400Response;
-        handlers[401] = &Connection::send401Response;
-        handlers[403] = &Connection::send403Response;
-        handlers[404] = &Connection::send404Response;
-        handlers[405] = &Connection::send405Response;
+	if (handlers[0] == 0) {
+		handlers[201] = &Connection::send201Response;
+		handlers[204] = &Connection::send204Response;
+		handlers[301] = &Connection::send301Response;
+		handlers[302] = &Connection::send302Response;
+		handlers[400] = &Connection::send400Response;
+		handlers[401] = &Connection::send401Response;
+		handlers[403] = &Connection::send403Response;
+		handlers[404] = &Connection::send404Response;
+		handlers[405] = &Connection::send405Response;
 		handlers[411] = &Connection::send411Response;
-        handlers[413] = &Connection::send413Response;
-        handlers[414] = &Connection::send414Response;
-        handlers[500] = &Connection::send500Response;
-        handlers[501] = &Connection::send501Response;
-        handlers[502] = &Connection::send502Response;
-        handlers[503] = &Connection::send503Response;
-        handlers[504] = &Connection::send504Response;
-        handlers[505] = &Connection::send505Response;
-    }
-    if (error_code < 506 && handlers[error_code])
-        (this->*handlers[error_code])();
-    return (false);
+		handlers[413] = &Connection::send413Response;
+		handlers[414] = &Connection::send414Response;
+		handlers[500] = &Connection::send500Response;
+		handlers[501] = &Connection::send501Response;
+		handlers[502] = &Connection::send502Response;
+		handlers[503] = &Connection::send503Response;
+		handlers[504] = &Connection::send504Response;
+		handlers[505] = &Connection::send505Response;
+	}
+	if (error_code < 506 && handlers[error_code])
+		(this->*handlers[error_code])();
+	return (false);
 }
 
 
 bool	Connection::isMethodAllowed(ServerWrapper& server, ssize_t best_match, std::string& method) {
 	
-	if (method.empty())
-		return (false);
+	if (method.empty()) // if no METHODS declared, then any method is allowed
+		return (true);
 	for (size_t j = 0; j < server.getMethodsSize(best_match); j++) {
 		
 		if (method == server.getMethod(best_match, j))
@@ -469,12 +477,12 @@ ssize_t			Connection::findBestMatch(ServerWrapper& server, std::string req_path)
 	
 	size_t max_match_len = 0;
 	ssize_t best_match = -1;
-	
-	for (size_t j = 0; j < server.getLocations().size(); ++j) {	
+
+	for (size_t j = 0; j < server.getLocations().size(); j++) {	
 		
 		const std::string& loc_path = server.getLocationPath(j);
 		if (req_path.rfind(loc_path, 0) == 0 && loc_path.size() > max_match_len) {
-
+			
 			max_match_len = loc_path.size();
 			best_match = j;
 		}
@@ -496,12 +504,12 @@ void		Connection::removeSpaces(std::string& str1, std::string& str2) {
 
 void Connection::printParserHeader(void) {
 	
-    std::cout << "\033[32m -----------[REQUEST]-----------\033[0m" << std::endl << std::endl;
-    std::map<std::string, std::string>::const_iterator it;
-    for (it = this->_headers.begin(); it != this->_headers.end(); ++it) {
-        std::cout << "\033[32m[" << it->first << "] = " << it->second << "\033[0m" << std::endl;
-    }
-    std::cout << "\033[32m--------------------------------\033[0m" << std::endl;
+	std::cout << "\033[32m -----------[REQUEST]-----------\033[0m" << std::endl << std::endl;
+	std::map<std::string, std::string>::const_iterator it;
+	for (it = this->_headers.begin(); it != this->_headers.end(); ++it) {
+		std::cout << "\033[32m[" << it->first << "] = " << it->second << "\033[0m" << std::endl;
+	}
+	std::cout << "\033[32m--------------------------------\033[0m" << std::endl;
 }
 
 
