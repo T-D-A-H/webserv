@@ -8,9 +8,7 @@ ConfigParser::ConfigParser(const std::string& filename) {
 
     parseFile(filename, vars);
     parseConfigFile(vars);
-    
-    // descomentar para imprimar datos
-    // printParsedConfig(_servers);
+
 }
 
 ConfigParser::ConfigParser(const ConfigParser& src) {*this = src;}
@@ -18,7 +16,6 @@ ConfigParser::ConfigParser(const ConfigParser& src) {*this = src;}
 ConfigParser& ConfigParser::operator=(const ConfigParser& src) {if (this != &src) {this->_servers = src._servers;} return (*this);}
 
 ConfigParser::~ConfigParser() {}
-
 
 void    ConfigParser::parseFile(const std::string& filename, ParserVariables& vars) {
 
@@ -47,6 +44,7 @@ void    ConfigParser::parseFile(const std::string& filename, ParserVariables& va
 void    ConfigParser::parseConfigFile(ParserVariables& vars) {
 
     vars.cur_server_index = -1;
+    vars.cur_loc_index = -1;
     vars.in_location = false;
     vars.in_server = false;
     for (vars.it = vars.config_array.begin(); vars.it != vars.config_array.end() ; ++vars.it) {
@@ -110,15 +108,14 @@ void    ConfigParser::handleBracketStack(ParserVariables& vars) {
 
     if (vars.token.find("server") != std::string::npos && vars.token.find("server_name") == std::string::npos) {
 
-        if (vars.in_server == true) {
-            std::cout << "Unknown directive inside server[" << vars.cur_server_index << "] => \"server\" <=";
+        if (vars.in_server == true)
             throw (MisconfigurationException("server"));
-        }
         vars.token = *(++vars.it);
         if (vars.token.find("{") != std::string::npos) {
             vars.cur_server_index++;
             vars.cur_server = ServerConfig();
             vars.in_server = true;
+            vars.cur_loc_index = -1;
             vars.token = *(++vars.it);
         }
     }
@@ -126,11 +123,12 @@ void    ConfigParser::handleBracketStack(ParserVariables& vars) {
 
         std::string temp = *(++vars.it);
 
-        if (vars.in_location == true)
+        if (vars.in_location == true || temp == "{")
             throw (MisconfigurationException("location " + vars.cur_loc.path));
         vars.token = *(++vars.it);
         if (vars.token.find("{") != std::string::npos) {
             vars.cur_loc = LocationConfig();
+            vars.cur_loc_index++;
             vars.in_location = true;
             vars.cur_loc.path = temp;
             vars.token = *(++vars.it);
@@ -167,6 +165,9 @@ void    ConfigParser::listenToken(ParserVariables& vars) {
 void    ConfigParser::serverNameToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_server.server_names.empty())
+        throw (DuplicateVariablesException(temp_var, "server"));
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "server"));        
     vars.it++;
@@ -192,6 +193,9 @@ void    ConfigParser::serverNameToken(ParserVariables& vars) {
 void     ConfigParser::clientMaxBodySizeToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+    
+    if (!vars.cur_server.has_client_max_body_size.empty())
+        throw (DuplicateVariablesException(temp_var, "server"));
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "server"));        
     vars.it++;
@@ -223,6 +227,7 @@ void     ConfigParser::clientMaxBodySizeToken(ParserVariables& vars) {
     else
         throw (UnknownVariableValueException(temp_var, "server"));
     vars.cur_server.client_max_body_size = str_to_unsigned_long(number_part) * multiplier;
+    vars.cur_server.has_client_max_body_size = "true";
 }
 
 void    ConfigParser::errorPageToken(ParserVariables& vars) {
@@ -257,6 +262,8 @@ void    ConfigParser::errorPageToken(ParserVariables& vars) {
         else
             throw (MissingClosingSemicolonException(temp_var, "server")); 
         pos = vars.token.find_last_of('/');
+        if (vars.cur_server.error_pages.find(error_code) != vars.cur_server.error_pages.end())
+            throw DuplicateVariablesException(temp_var, "server");
         if (pos != std::string::npos) {
             std::string root = vars.token.substr(0, pos + 1);
             std::string file = vars.token.substr(pos + 1);
@@ -269,8 +276,10 @@ void    ConfigParser::errorPageToken(ParserVariables& vars) {
 
 void    ConfigParser::defaultServerRoot(ParserVariables& vars) {
 
-
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_server.default_root.empty())
+        throw DuplicateVariablesException(temp_var, "server");
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "server"));        
     vars.it++;
@@ -293,6 +302,9 @@ void    ConfigParser::defaultServerRoot(ParserVariables& vars) {
 void    ConfigParser::defaultServerIndex(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_server.default_indices.empty())
+        throw DuplicateVariablesException(temp_var, "server");
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "server"));        
     vars.it++;
@@ -318,6 +330,9 @@ void    ConfigParser::defaultServerIndex(ParserVariables& vars) {
 void    ConfigParser::rootToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_loc.root.empty())
+        throw (DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path));
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
     vars.it++;
@@ -343,6 +358,9 @@ void    ConfigParser::rootToken(ParserVariables& vars) {
 void    ConfigParser::indexToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_loc.indices.empty())
+        throw (DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path));
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
     vars.it++;
@@ -371,6 +389,8 @@ void    ConfigParser::methodsToken(ParserVariables& vars) {
     bool found = false;
 
     std::string temp_var = *vars.it;
+    if (!vars.cur_loc.methods.empty())
+        throw DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path);
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
     vars.it++;
@@ -398,6 +418,9 @@ void    ConfigParser::methodsToken(ParserVariables& vars) {
 void    ConfigParser::autoIndexToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_loc.auto_index_str.empty())
+        throw (DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path));
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
     vars.it++;
@@ -410,6 +433,7 @@ void    ConfigParser::autoIndexToken(ParserVariables& vars) {
 
         if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';' && pos != std::string::npos) {
             vars.token.erase(vars.token.size() - 1);
+            vars.cur_loc.auto_index_str = "auto_index";
             if (vars.token == "on")
                 vars.cur_loc.auto_index = true;
             else if (vars.token == "off")
@@ -427,6 +451,9 @@ void    ConfigParser::autoIndexToken(ParserVariables& vars) {
 void    ConfigParser::redirectToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_loc.redirect.empty())
+        throw DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path);
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
     vars.it++;
@@ -462,6 +489,9 @@ void    ConfigParser::redirectToken(ParserVariables& vars) {
 void    ConfigParser::cgiExtensionToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_loc.cgi_extensions.empty())
+        throw DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path);
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
     vars.it++;
@@ -486,6 +516,9 @@ void    ConfigParser::cgiExtensionToken(ParserVariables& vars) {
 void    ConfigParser::uploadStoreToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
+
+    if (!vars.cur_loc.upload_store.empty())
+        throw DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path);
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
     vars.it++;

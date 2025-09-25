@@ -15,6 +15,7 @@ struct ParserVariables
     ServerConfig                        cur_server;
     size_t                              cur_server_index;
     LocationConfig                      cur_loc;
+    int                                 cur_loc_index;
 };
 
 
@@ -54,6 +55,15 @@ class ConfigParser
 
         const std::vector<ServerConfig>& getServers() const;
 
+        class DuplicateVariablesException : public std::exception {
+            std::string _msg;
+        public:
+            DuplicateVariablesException(const std::string& token, const std::string& context) throw() {
+                _msg = "[" + context + " ] => \"" + token + "\" <= \033[1;31m Duplicate variable.\033[0m";}
+            virtual ~DuplicateVariablesException() throw() {}
+            const char* what() const throw() { return _msg.c_str(); }
+        };
+        
         class MissingValueException : public std::exception {
             std::string _msg;
         public:
