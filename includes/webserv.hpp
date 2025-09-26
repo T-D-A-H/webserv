@@ -49,6 +49,7 @@ struct LocationConfig
     size_t                      redirect_code;
     std::set<std::string>       cgi_extensions;
     std::string                 upload_store;
+    int                         bracket_state;
 };
 
 struct ServerConfig
@@ -61,16 +62,33 @@ struct ServerConfig
     std::string                                             default_root;
     std::vector<std::string>                                default_indices;
     std::vector<LocationConfig>                             locations;
+    int                                                     bracket_state;
 };
 
-struct Part {
+struct ParserVariables
+{
+    std::string                         buffer;
+    std::vector<std::string>            config_array;
+    std::vector<std::string>::iterator  it;
+    std::string                         token;
+    bool                                in_server;
+    bool                                in_location;
+    ServerConfig                        cur_server;
+    size_t                              cur_server_index;
+    LocationConfig                      cur_loc;
+    int                                 cur_loc_index;
+};
+
+struct Part
+{
     std::string headers;
     std::string content;
     std::string filename;
 	std::string	content_type;
 };
 
-struct Endpoint {
+struct Endpoint
+{
     std::string ip;
     uint16_t    port;
 
@@ -78,7 +96,8 @@ struct Endpoint {
     Endpoint(const std::string &i, uint16_t p) : ip(i), port(p) {}
 };
 
-struct PollData {
+struct PollData
+{
     int fd;
     size_t server_index;
 

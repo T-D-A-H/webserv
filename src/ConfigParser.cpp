@@ -50,7 +50,7 @@ void    ConfigParser::parseConfigFile(ParserVariables& vars) {
     for (vars.it = vars.config_array.begin(); vars.it != vars.config_array.end() ; ++vars.it) {
 
         vars.token = *vars.it;
-        handleBracketStack(vars);
+        handleOpenBracket(vars);
         if (vars.in_server == true  && vars.in_location == false) {
 
             if (!isMisconfiguredServer(vars))
@@ -86,53 +86,72 @@ void    ConfigParser::parseConfigFile(ParserVariables& vars) {
                 cgiExtensionToken(vars);
             else if (vars.token.find("upload_store") != std::string::npos)
                 uploadStoreToken(vars);
-
         }
-        if (vars.token.find("}") != std::string::npos && vars.in_location == true) {
+        handleClosedBracket(vars);
 
-            vars.in_location = false;
-            vars.cur_server.locations.push_back(vars.cur_loc);
-        }
-        else if (vars.token.find("}") != std::string::npos && vars.in_location == false && vars.in_server == true) {
-
-            vars.in_server = false;
-            this->_servers.push_back(vars.cur_server);
-        }
     }
-    if (vars.in_server == true || vars.in_location == true) {
-        throw (MissingClosingBracketException("server"));
-    }
+    if (vars.in_server || vars.in_location || vars.cur_server.bracket_state != 0 || vars.cur_loc.bracket_state != 0)
+        throw MissingClosingBracketException("server");
 }
 
-void    ConfigParser::handleBracketStack(ParserVariables& vars) {
+void    ConfigParser::handleOpenBracket(ParserVariables& vars) {
 
-    if (vars.token.find("server") != std::string::npos && vars.token.find("server_name") == std::string::npos) {
+    if (vars.token == "{")
+        throw (ExtraOpenBracketException("server")); 
+    if (vars.token == "server") {
 
         if (vars.in_server == true)
             throw (MisconfigurationException("server"));
         vars.token = *(++vars.it);
-        if (vars.token.find("{") != std::string::npos) {
+        if (vars.token == "{") {
             vars.cur_server_index++;
             vars.cur_server = ServerConfig();
+            vars.cur_server.bracket_state = 1;
             vars.in_server = true;
             vars.cur_loc_index = -1;
             vars.token = *(++vars.it);
         }
     }
-    else if (vars.token.find("location") != std::string::npos) {
+    else if (vars.token != "server_name" && vars.token.find("server") != std::string::npos)
+        throw (MisconfigurationException(vars.token));
+    else if (vars.token == "location") {
 
         std::string temp = *(++vars.it);
 
+        if (temp == vars.cur_loc.path)
+            throw (DuplicateLocationException(temp, "location " + vars.cur_loc.path));
         if (vars.in_location == true || temp == "{")
             throw (MisconfigurationException("location " + vars.cur_loc.path));
         vars.token = *(++vars.it);
-        if (vars.token.find("{") != std::string::npos) {
+        if (vars.token == "{") {
             vars.cur_loc = LocationConfig();
             vars.cur_loc_index++;
             vars.in_location = true;
             vars.cur_loc.path = temp;
+            vars.cur_loc.bracket_state  = 1;
             vars.token = *(++vars.it);
         }
+    }
+    else if (vars.token.find("location") != std::string::npos && vars.in_location == false)
+        throw (MisconfigurationException(vars.token));
+}
+
+void    ConfigParser::handleClosedBracket(ParserVariables& vars) {
+
+    if (vars.token == "}") {
+
+        if (vars.in_location == true && vars.cur_loc.bracket_state == 1) {
+            vars.in_location = false;
+            vars.cur_loc.bracket_state  = 0;
+            vars.cur_server.locations.push_back(vars.cur_loc);
+        }
+        else if (vars.in_server == true && vars.cur_server.bracket_state == 1) {
+            vars.in_server = false;
+            vars.cur_server.bracket_state  = 0;
+            this->_servers.push_back(vars.cur_server);
+        }
+        else
+            throw (ExtraClosingBracketException("server"));
     }
 }
 
@@ -155,8 +174,14 @@ void    ConfigParser::listenToken(ParserVariables& vars) {
         else
             throw (MissingClosingBracketException("server"));   
         colon_pos = vars.token.find(':');
+        std::string ip = vars.token.substr(0, colon_pos);
+        std::string port_str = vars.token.substr(colon_pos + 1);
+        int port = std::atoi(port_str.c_str());
+        for (size_t i = 0; i < vars.cur_server.ips_and_ports.size(); i++)
+            if (vars.cur_server.ips_and_ports[i].first == ip && vars.cur_server.ips_and_ports[i].second == port)
+                throw (DuplicateVariablesException(ip + ":" + port_str, "server " + temp_var));
         if (colon_pos != std::string::npos && vars.token[colon_pos + 1] && isdigit(vars.token[colon_pos + 1]))
-            vars.cur_server.ips_and_ports.push_back(std::make_pair(vars.token.substr(0, colon_pos), std::atoi(vars.token.substr(colon_pos + 1).c_str())));
+            vars.cur_server.ips_and_ports.push_back(std::make_pair(ip, port));
         else
             throw (MissingPortException(temp_var, "server"));
     }
@@ -252,6 +277,7 @@ void    ConfigParser::errorPageToken(ParserVariables& vars) {
             }
         }
         error_code = std::atoi(vars.token.c_str());
+        std::string error_code_str = " " + vars.token;
         vars.it++;
         if (vars.it == vars.config_array.end() || (*vars.it)[0] == ';')
             throw (MissingErrorCodePage(temp_var, "server"));
@@ -263,7 +289,7 @@ void    ConfigParser::errorPageToken(ParserVariables& vars) {
             throw (MissingClosingSemicolonException(temp_var, "server")); 
         pos = vars.token.find_last_of('/');
         if (vars.cur_server.error_pages.find(error_code) != vars.cur_server.error_pages.end())
-            throw DuplicateVariablesException(temp_var, "server");
+            throw DuplicateVariablesException(temp_var + error_code_str, "server");
         if (pos != std::string::npos) {
             std::string root = vars.token.substr(0, pos + 1);
             std::string file = vars.token.substr(pos + 1);

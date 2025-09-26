@@ -3,22 +3,6 @@
 
 #include "./webserv.hpp"
 
-
-struct ParserVariables
-{
-    std::string                         buffer;
-    std::vector<std::string>            config_array;
-    std::vector<std::string>::iterator  it;
-    std::string                         token;
-    bool                                in_server;
-    bool                                in_location;
-    ServerConfig                        cur_server;
-    size_t                              cur_server_index;
-    LocationConfig                      cur_loc;
-    int                                 cur_loc_index;
-};
-
-
 class ConfigParser
 {
     private:
@@ -28,7 +12,8 @@ class ConfigParser
         unsigned long               str_to_unsigned_long(const std::string& s);
         void                        parseFile(const std::string& filename, ParserVariables& vars);
         void                        parseConfigFile(ParserVariables& vars);
-        void                        handleBracketStack(ParserVariables& vars);
+        void                        handleOpenBracket(ParserVariables& vars);
+        void                        handleClosedBracket(ParserVariables& vars);
         void                        listenToken(ParserVariables& vars);
         void                        serverNameToken(ParserVariables& vars);
         void                        clientMaxBodySizeToken(ParserVariables& vars);
@@ -55,6 +40,16 @@ class ConfigParser
 
         const std::vector<ServerConfig>& getServers() const;
 
+
+        class DuplicateLocationException : public std::exception {
+            std::string _msg;
+        public:
+            DuplicateLocationException(const std::string& token, const std::string& context) throw() {
+                _msg = "[" + context + " ] => \"" + token + "\" <= \033[1;31m Duplicate location.\033[0m";}
+            virtual ~DuplicateLocationException() throw() {}
+            const char* what() const throw() { return _msg.c_str(); }
+        };
+
         class DuplicateVariablesException : public std::exception {
             std::string _msg;
         public:
@@ -68,7 +63,7 @@ class ConfigParser
             std::string _msg;
         public:
             MissingValueException(const std::string& token, const std::string& context) throw() {
-                _msg = "[" + context + " ] => \"" + token + "\" <= \033[1;31m Missing variable value.\033[0m";}
+                _msg = "[" + context + " ] => \"" + token + "\" <= \033[1;31m Missing value.\033[0m";}
             virtual ~MissingValueException() throw() {}
             const char* what() const throw() { return _msg.c_str(); }
         };
@@ -104,11 +99,29 @@ class ConfigParser
             std::string _msg;
         public:
             UnknownVariableValueException(const std::string& token, const std::string& context) throw() {
-                _msg = "[" + context + " ] => \"" + token + "\" <= \033[1;31m Unknown variable value.\033[0m";}
+                _msg = "[" + context + " ] => \"" + token + "\" <= \033[1;31m Unknown value.\033[0m";}
             virtual ~UnknownVariableValueException() throw() {}
             const char* what() const throw() { return _msg.c_str(); }
         };
-        
+   
+        class ExtraOpenBracketException : public std::exception {
+            std::string _msg;
+        public:
+            ExtraOpenBracketException(const std::string& context) throw() {
+                _msg = "[" + context + " ] <= \033[1;31m Extra open bracket.\033[0m";}
+            virtual ~ExtraOpenBracketException() throw() {}
+            const char* what() const throw() { return _msg.c_str(); }
+        };   
+
+        class ExtraClosingBracketException : public std::exception {
+            std::string _msg;
+        public:
+            ExtraClosingBracketException(const std::string& context) throw() {
+                _msg = "[" + context + " ] <= \033[1;31m Extra closing bracket.\033[0m";}
+            virtual ~ExtraClosingBracketException() throw() {}
+            const char* what() const throw() { return _msg.c_str(); }
+        };   
+
         class MissingClosingBracketException : public std::exception {
             std::string _msg;
         public:
