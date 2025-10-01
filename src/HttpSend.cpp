@@ -53,6 +53,33 @@ void		HttpSend::sendDeleteResponse(int fd, HttpReceive& _connection) {
 	close(fd);
 }
 
+void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _connection, size_t best_match) {
+
+	std::string			response;
+	std::ostringstream	oss;
+	int					error_code = _connection.getServer().getRedirectCode(best_match);
+	std::string			url_or_loc = _connection.getServer().getRedirectUrl(best_match);
+
+	
+
+	if (url_or_loc.empty() || (!url_or_loc.empty() && error_code != 301 && error_code != 302)) {
+
+		sendErr(fd, _connection, error_code);
+	}
+	else if (!url_or_loc.empty() && (error_code == 301 || error_code  == 302)) {
+
+    	oss << "HTTP/1.1 " << error_code << getStatusMsg(error_code) << "\r\n"
+    		<< "Location: " << url_or_loc << "\r\n"
+    		<< "Content-Length: " << 0 << "\r\n"
+    		<< "Connection: close\r\n"
+			<< "\r\n";
+	}
+    response = oss.str();
+	::send(fd, response.c_str(), response.size(), 0);
+    ::close(fd);
+
+}
+
 void		HttpSend::sendAutoResponse(int fd, HttpReceive& _connection, const std::string &direction_path) {
 
 	DIR * dir = opendir(direction_path.c_str());
@@ -196,7 +223,7 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _connection) {
 	}
 }
 
-void        HttpSend::sendErr(int fd, HttpReceive& _connection, int error_code, const std::string& status) {
+void        HttpSend::sendErr(int fd, HttpReceive& _connection, int error_code) {
 
     std::ostringstream buf;
     std::string body;
@@ -217,13 +244,13 @@ void        HttpSend::sendErr(int fd, HttpReceive& _connection, int error_code, 
     }
     if (error ==  1) {
 
-            buf << "<!DOCTYPE html><html><head><title>" << status << "</title></head>"
-            << "<body><h1>" << status << "</h1></body></html>";	
+            buf << "<!DOCTYPE html><html><head><title>" << getStatusMsg(error_code) << "</title></head>"
+            << "<body><h1>" << getStatusMsg(error_code) << "</h1></body></html>";	
             body = buf.str();
     }
-    
+    //THIS SHOULD SEND ALSO THE STATUS CODE
     std::ostringstream oss;
-    oss << "HTTP/1.1 " << status << "\r\n"
+    oss << "HTTP/1.1 " << error_code << getStatusMsg(error_code) << "\r\n"
     	<< "Content-Type: text/html\r\n"
     	<< "Content-Length: " << body.size() << "\r\n"
     	<< "Connection: close\r\n\r\n"
@@ -233,6 +260,35 @@ void        HttpSend::sendErr(int fd, HttpReceive& _connection, int error_code, 
     ::send(fd, response.c_str(), response.size(), 0);
     ::close(fd);
 }
+
+std::string		HttpSend::getStatusMsg(int error_code) {
+
+	std::map<int, std::string> status_msg;
+	status_msg[200] = " OK";
+	status_msg[201] = " Created";
+	status_msg[204] = " No Content";
+	status_msg[301] = " Moved Permanently";
+	status_msg[302] = " Found";
+	status_msg[400] = " Bad Request";
+	status_msg[401] = " Unauthorized";
+	status_msg[403] = " Forbidden";
+	status_msg[404] = " Not Found";
+	status_msg[405] = " Method Not Allowed";
+	status_msg[411] = " Length Required";
+	status_msg[413] = " Payload Too Large";
+	status_msg[414] = " URI Too Long";
+	status_msg[415] = " Unsupported Media Type";
+	status_msg[500] = " Internal Server Error";
+	status_msg[501] = " Not Implemented";
+	status_msg[502] = " Bad Gateway";
+	status_msg[503] = " Service Unavailable";
+	status_msg[504] = " Gateway Timeout";
+	status_msg[505] = " HTTP Version Not Supported";
+	if (!status_msg[error_code].empty())
+		return (status_msg[error_code]);
+	return ("");
+}
+
 
 std::string		getContentType(const std::string& path) {
 	

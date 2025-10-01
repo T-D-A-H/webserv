@@ -18,3 +18,9 @@ them, the CGI will expect EOF as the end of the body.
 
 - The same applies to the output of the CGI. If no content_length is
 returned from the CGI, EOF will mark the end of the returned data.
+
+- Check in ConfigParser that redirect only Allows the following formats:
+        - return 421;
+        - return 234 "http://url.com"
+        - return 123 "string"
+        - return "url"  (WRONG)

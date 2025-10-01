@@ -129,6 +129,7 @@ void    ConfigParser::handleOpenBracket(ParserVariables& vars) {
             vars.in_location = true;
             vars.cur_loc.path = temp;
             vars.cur_loc.bracket_state  = 1;
+            vars.cur_loc.has_redirect = false;
             vars.token = *(++vars.it);
         }
     }
@@ -478,7 +479,8 @@ void    ConfigParser::redirectToken(ParserVariables& vars) {
 
     std::string temp_var = *vars.it;
 
-    if (!vars.cur_loc.redirect.empty())
+    vars.cur_loc.has_redirect = true;
+    if (!vars.cur_loc.redirect_url.empty())
         throw DuplicateVariablesException(temp_var, "location " + vars.cur_loc.path);
     if (temp_var.find(';') != std::string::npos)
         throw (MissingValueException(temp_var, "location " + vars.cur_loc.path));        
@@ -486,27 +488,22 @@ void    ConfigParser::redirectToken(ParserVariables& vars) {
     if (vars.it == vars.config_array.end())
         throw (MissingClosingBracketException("location " + vars.cur_loc.path));   
     vars.token = *vars.it;
-    if (std::isdigit(vars.token[0])) {
-
-        vars.cur_loc.redirect_code = std::atoi(vars.token.c_str());
-        if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';')
-            return ;
-        ++vars.it;
-        if (vars.it == vars.config_array.end())
-            throw (MissingClosingBracketException("location " + vars.cur_loc.path)); 
-        vars.token = *vars.it;
-        if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';') {
-            vars.token.erase(vars.token.size() - 1);
-            if (!vars.token.empty())
-                vars.cur_loc.redirect = vars.token;
-            return ;
-        }
-        return ;
+    size_t n = (vars.token[vars.token.size() - 1] == ';') ? 1 : 0;
+    for (size_t i = 0; i < vars.token.size() - n; i++) {
+        if (!std::isdigit(vars.token[i]))
+            throw (MissingRedirectCodeException(temp_var, "location " + vars.cur_loc.path));
     }
-    vars.cur_loc.redirect_code = 302;
+    vars.cur_loc.redirect_code = std::atoi(vars.token.c_str());
+    if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';')
+        return ;
+    ++vars.it;
+    if (vars.it == vars.config_array.end())
+        throw (MissingClosingBracketException("location " + vars.cur_loc.path)); 
+    vars.token = *vars.it;
     if (!vars.token.empty() && vars.token[vars.token.size() - 1] == ';') {
         vars.token.erase(vars.token.size() - 1);
-        vars.cur_loc.redirect = vars.token;
+        if (!vars.token.empty())
+            vars.cur_loc.redirect_url = vars.token;
         return ;
     }
     throw (MissingClosingSemicolonException(temp_var, "location " + vars.cur_loc.path)); 
@@ -728,8 +725,8 @@ void        ConfigParser::printParsedConfig(const std::vector<ServerConfig>& ser
             if (loc.auto_index == true || loc.auto_index == false)
                 std::cout << "      Autoindex: " << (loc.auto_index ? "on" : "off") << "\n";
     
-            if (!loc.redirect.empty())
-                std::cout << "      Redirect: " << loc.redirect << "\n";
+            if (!loc.redirect_url.empty())
+                std::cout << "      Redirect: " << loc.redirect_url << "\n";
             if (loc.redirect_code != 0)  
                 std::cout << "      Redirect Code: " << loc.redirect_code << "\n";
     

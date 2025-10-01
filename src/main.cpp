@@ -41,7 +41,9 @@ int main(int argc, char **argv)
 
 				std::string method = pd.client->getHeader("Method");
 
-				if (pd.client->isCgiScript())
+				if (pd.client->isRedirection())
+					pd.client->sendRedirectResponse();
+				else if (pd.client->isCgiScript())
 					pd.client->sendCgiResponse();
 				else if (method == "GET")
 					pd.client->sendGetResponse();

@@ -199,10 +199,16 @@ bool                    ServerWrapper::getAutoIndex(size_t loc_index) const {
     return (config->locations[loc_index].auto_index);
 }
 
-std::string            ServerWrapper::getRedirect(size_t loc_index) const {
+bool                   ServerWrapper::getRedirect(size_t loc_index) const {
+
+    if (!config || loc_index >= config->locations.size()) return (false);
+    return (config->locations[loc_index].has_redirect);
+}
+
+std::string            ServerWrapper::getRedirectUrl(size_t loc_index) const {
 
     if (!config || loc_index >= config->locations.size()) return (0);
-    return (config->locations[loc_index].redirect);
+    return (config->locations[loc_index].redirect_url);
 }
 
 size_t             ServerWrapper::getRedirectCode(size_t loc_index) const {

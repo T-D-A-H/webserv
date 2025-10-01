@@ -64,11 +64,12 @@ class ServerWrapper
         std::string                         getLocationIndexFile(size_t loc_index, size_t index_file) const;
         size_t                              getLocationIndexCount(size_t loc_index) const;
         bool                                getAutoIndex(size_t loc_index) const;
+        bool                                getRedirect(size_t loc_index) const;
+        std::string                         getRedirectUrl(size_t loc_index) const;
         size_t                              getRedirectCode(size_t loc_index) const;
         size_t                              getMethodsSize(size_t loc_index) const;
         std::set<std::string>               getMethods(size_t loc_index) const;
         std::string                         getMethod(size_t loc_index, size_t method_index) const;
-        std::string                         getRedirect(size_t loc_index) const;
         std::string                         getCgiExtensions(size_t loc_index, size_t cgi_extension_index) const;
         size_t                              getCgiExtensionCount(size_t loc_index) const;
         std::string                         getUploadStore(size_t loc_index) const;

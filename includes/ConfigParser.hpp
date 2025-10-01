@@ -12,7 +12,8 @@ struct LocationConfig
     std::set<std::string>       methods;
     bool                        auto_index;
     std::string                 auto_index_str;
-    std::string                 redirect;
+    bool                        has_redirect;
+    std::string                 redirect_url;
     size_t                      redirect_code;
     std::set<std::string>       cgi_extensions;
     std::string                 upload_store;
@@ -201,6 +202,15 @@ class ConfigParser
             const char* what() const throw() { return _msg.c_str(); }
         };
         
+        class MissingRedirectCodeException : public std::exception {
+            std::string _msg;
+        public:
+            MissingRedirectCodeException(const std::string& token, const std::string& context) throw() {
+                _msg = "[" + context + " ] => \"" + token + "\" <= \033[1;31m Missing redirection code.\033[0m";}
+            virtual ~MissingRedirectCodeException() throw() {}
+            const char* what() const throw() { return _msg.c_str(); }
+        };
+
         class MissingErrorCodePage : public std::exception {
             std::string _msg;
         public:

@@ -16,6 +16,7 @@ HttpReceive::HttpReceive(ServerWrapper& _server) : _server(_server) {
 	
 	this->_fd = this->_server.getFD();
 	this->_is_cgi_script = false;
+	this->_is_redirect = false;
 }
 
 HttpReceive::~HttpReceive() {}
@@ -182,7 +183,7 @@ bool			HttpReceive::prepareRequest() {
 
 
 
-bool			HttpReceive::checkRequest(ServerWrapper&	server, std::string root, ssize_t best_match) {
+bool			HttpReceive::checkRequest(ServerWrapper& server, std::string root, ssize_t best_match) {
 
  	if (this->_headers["Method"].empty() || this->_headers["Path"].empty() || this->_headers["Version"].empty() || this->_headers["Host"].empty())
 		return (sendError(400));
@@ -202,7 +203,12 @@ bool			HttpReceive::checkRequest(ServerWrapper&	server, std::string root, ssize_
 		return (sendError(413));
 	if (this->_headers["Method"] == "POST" && this->_headers["Content-Type"].empty())
 		return (sendError(415));
-	if (this->_headers["Method"] == "GET") {
+	if (server.getRedirect(best_match)) {
+
+		this->_is_redirect = true;
+		return (true);
+	}
+	else if (this->_headers["Method"] == "GET") {
 
 		if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
 			return (sendError(405));
@@ -244,7 +250,7 @@ bool			HttpReceive::checkRequest(ServerWrapper&	server, std::string root, ssize_
 		
 		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
 			return (sendError(405));
-		size_t	extension_pos = this->_headers["Path"].find('.');
+		size_t	extension_pos = this->_headers["Path"].find(".py");
 		if (extension_pos != std::string::npos) {
 		
 			std::string file_extension = this->_headers["Path"].substr(extension_pos);
@@ -257,18 +263,12 @@ bool			HttpReceive::checkRequest(ServerWrapper&	server, std::string root, ssize_
 
 		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
 			return (sendError(405));
-		// Intento de Path transversal
-		// Intento de eliminar archivos para atras o archivos importantes como .conf
 		if (this->_full_path.find("%2e%2e") != std::string::npos) {
 				return (sendError(403));
 		}
-
-		// Si existe o no 
 		if (!fileExistsAndReadable(this->_full_path.c_str(), 0)) {
 			return (sendError(404));
 		}
-
-		// Eliminar
 		if (remove(this->_full_path.c_str()) != 0) {
         	return (sendError(403));
 		}
@@ -447,6 +447,8 @@ bool		HttpReceive::sendError(size_t error_code) {
 	return (false);
 }
 
+bool			HttpReceive::isRedirection() {return (this->_is_redirect);}
+
 bool 			HttpReceive::isCgiScript() {return (this->_is_cgi_script);}
 
 ssize_t			HttpReceive::getBestMatch() {return (_best_match);}
@@ -484,6 +486,8 @@ void			HttpReceive::sendGetResponse() {HttpSend::sendGetResponse(getFd(), *this)
 void			HttpReceive::sendPostResponse() {HttpSend::sendPostResponse(getFd(), *this); }
 
 void			HttpReceive::sendCgiResponse() {HttpSend::sendCgiResponse(getFd(), *this); }
+
+void			HttpReceive::sendRedirectResponse() {HttpSend::sendRedirectResponse(getFd(), *this, getBestMatch()); }
 
 void			HttpReceive::send200Response() { HttpSend::send200(getFd(), *this); }
 

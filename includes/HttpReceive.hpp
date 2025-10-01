@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/01 12:53:54 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/01 15:38:08 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,7 @@ class HttpReceive {
 		std::string							_request_complete;
 		std::string							_post_body;
 		bool								_is_cgi_script;
+		bool								_is_redirect;
 
 		typedef void						(HttpReceive::*Handler)();
 		
@@ -74,11 +75,12 @@ class HttpReceive {
 		ServerWrapper&						getServer();
 		size_t								getPostBodySize();
 		std::string							getPostBody();
-
-
+		
+		
 		bool								checkRequest(ServerWrapper&	server, std::string root, ssize_t best_match);
 		ssize_t								getBestMatch();
 		ssize_t								findBestMatch(ServerWrapper& server, std::string req_path);
+		bool								isRedirection();
 		bool								isCgiScript();
 		bool								isMethodAllowed(ServerWrapper& server, ssize_t best_match, std::string& method);		
 		bool								fileExistsAndReadable(const char* path, int mode);
@@ -91,6 +93,7 @@ class HttpReceive {
 		void								sendDeleteResponse();
 		void								sendAutoResponse(const std::string &direction_path);
 		void								sendCgiResponse();
+		void								sendRedirectResponse();
 		bool								sendError(size_t error_code);
 		void								send200Response();
 		void								send201Response();
