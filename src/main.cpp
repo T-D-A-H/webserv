@@ -3,10 +3,6 @@
 #include "../includes/Servers.hpp"
 #include "../includes/Connection.hpp"
 
-
-std::string _previous_full_path = "";
-
-
 int main(int argc, char **argv)
 {
     std::string conf_file = (argc < 2) ? DEFAULT_CONF_FILE : argv[1];
@@ -30,36 +26,33 @@ int main(int argc, char **argv)
 				continue ;
 			
 			PollData &pd = conn.getFdMap()[fd];
-            if (conn.getEpollEvent(i).events & EPOLLIN) {
-
-                if (pd.is_listener) {
+            if (pd.is_listener && (conn.getEpollEvent(i).events & EPOLLIN)) {
 
                     if (conn.acceptClient(servers, fd, pd) == -1)
                         continue ;
-                }
-                else {
+			}
+            else if (!pd.is_listener && (conn.getEpollEvent(i).events & EPOLLIN)) {
 
-					pd.client->setFd(fd);
-					if (!pd.client->receiveRequest() || !pd.client->saveRequest() || !pd.client->prepareRequest()) {
-                        conn.removeClient(pd);
-						continue ;
-					}
+				pd.client->setFd(fd);
+				if (!pd.client->receiveRequest() || !pd.client->saveRequest() || !pd.client->prepareRequest()) {
+            	    conn.removeClient(pd);
+					continue ;
+				}
 
-					std::string method = pd.client->getHeader("Method");
+				std::string method = pd.client->getHeader("Method");
 
-					if (pd.client->isCgiScript())
-						pd.client->sendCgiResponse();
-					else if (method == "GET")
-						pd.client->sendGetResponse();
-					else if (method == "POST")
-						pd.client->sendPostResponse();
-					else if (method == "DELETE")
-						pd.client->sendDeleteResponse();
-                    
-                    conn.removeClient(pd);
-                }
+				if (pd.client->isCgiScript())
+					pd.client->sendCgiResponse();
+				else if (method == "GET")
+					pd.client->sendGetResponse();
+				else if (method == "POST")
+					pd.client->sendPostResponse();
+				else if (method == "DELETE")
+					pd.client->sendDeleteResponse();
+			
+            	conn.removeClient(pd);
             }
         }
-	}
+    }
 	return (0);
 }

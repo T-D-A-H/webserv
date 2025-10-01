@@ -27,7 +27,7 @@ class HttpSend {
 		static void sendErr(int fd, HttpReceive& _connection, int error_code, const std::string& status);
 		
 		static void	sendGetResponse(int fd, HttpReceive& _connection);
-		static void	sendPostResponse(int fd, HttpReceive& _connection, std::string _previous_full_path);
+		static void	sendPostResponse(int fd, HttpReceive& _connection);
 		static void	sendDeleteResponse(int fd, HttpReceive& _connection);
 		static void	sendAutoResponse(int fd, HttpReceive& _connection, const std::string &direction_path);
 		static void	sendCgiResponse(int fd, HttpReceive& _connection);

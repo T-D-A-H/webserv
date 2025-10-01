@@ -20,16 +20,15 @@ void		HttpSend::sendGetResponse(int fd, HttpReceive& _connection) {
 	close(fd);
 }
 
-void		HttpSend::sendPostResponse(int fd, HttpReceive& _connection, std::string _previous_full_path) {
+void		HttpSend::sendPostResponse(int fd, HttpReceive& _connection) {
 
 	std::ostringstream body_stream;
 	body_stream << _connection.getFile().rdbuf();
 	std::string body = body_stream.str();
 	
-
 	std::ostringstream oss;
 	oss << "HTTP/1.1 303 See Other\r\n";
-	oss << "Location: "<< _previous_full_path  << "\r\n";
+	oss << "Location: "<< _connection.getHeader("Path") << "\r\n";
 	oss << "Content-Length: " << body.size() << "\r\n";
 	oss << "Connection: close\r\n\r\n";
 

@@ -142,7 +142,7 @@ bool			HttpReceive::saveRequest() {
 bool			HttpReceive::prepareRequest() {
 	
 	std::string				 req_path   = this->_headers["Path"];
-	ServerWrapper&			 server	   = this->_server;
+	ServerWrapper&			 server	    = this->_server;
 	ssize_t					 best_match = findBestMatch(server, req_path);
 	LocationConfig			 _location;
 	std::vector<std::string> index_files;
@@ -159,19 +159,15 @@ bool			HttpReceive::prepareRequest() {
 	index_files = _location.indices.empty() ? server.getDefaultIndices() : server.getLocationIndices(best_match);
 	
 	this->_headers["Root"] = root;
-	if (req_path == server.getLocationPath(getBestMatch()) || req_path == server.getLocationPath(getBestMatch()) + "/") {
-		if (index_files.size() != 0) {
-			_previous_full_path = this->_headers["Path"];
-			for (size_t i = 0; i < index_files.size(); i++) {
-				std::string found_path = root + index_files[i];
-				if (fileExistsAndReadable(found_path.c_str(), 0)) {
-					this->_full_path = found_path;
-					break ;
-				}
+	this->_headers["Upload Store"] = _location.upload_store;
+
+	if (index_files.size() != 0 && (req_path == server.getLocationPath(getBestMatch()) || req_path == server.getLocationPath(getBestMatch()) + "/")) {
+		for (size_t i = 0; i < index_files.size(); i++) {
+			std::string found_path = root + index_files[i];
+			if (fileExistsAndReadable(found_path.c_str(), 0)) {
+				this->_full_path = found_path;
+				break ;
 			}
-		}
-		else {
-			this->_full_path = _previous_full_path;
 		}
 	}
 	else {
@@ -233,9 +229,10 @@ bool			HttpReceive::checkRequest(ServerWrapper&	server, std::string root, ssize_
 		
 		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
 			return (sendError(405));
-		
-		for (size_t i = 0; i < this-> parts.size(); ++i) {
-			std::string full_path = root + this->parts[i].filename;
+		if (this->_headers["Upload Store"].empty())
+			return (sendError(500));
+		for (size_t i = 0; i < this->parts.size(); ++i) {
+			std::string full_path = this->_headers["Upload Store"] + this->parts[i].filename;
 			std::ofstream file_post(full_path.c_str());
 			if (!file_post)
 				return (std::cerr << ERROR_CREATE_FILE << full_path << std::endl, false);
@@ -484,7 +481,7 @@ void			HttpReceive::sendDeleteResponse() {HttpSend::sendDeleteResponse(getFd(), 
 
 void			HttpReceive::sendGetResponse() {HttpSend::sendGetResponse(getFd(), *this); }
 
-void			HttpReceive::sendPostResponse() {HttpSend::sendPostResponse(getFd(), *this, _previous_full_path); }
+void			HttpReceive::sendPostResponse() {HttpSend::sendPostResponse(getFd(), *this); }
 
 void			HttpReceive::sendCgiResponse() {HttpSend::sendCgiResponse(getFd(), *this); }
 

@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/09/30 16:10:22 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/01 12:53:54 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,6 @@
 #include <ctime> 
 
 class ServerWrapper;
-extern std::string							_previous_full_path;
 
 struct Part
 {
@@ -50,7 +49,6 @@ class HttpReceive {
 		ssize_t								_best_match;
 		std::string							_request_complete;
 		std::string							_post_body;
-		// std::time_t							_last_activity;
 		bool								_is_cgi_script;
 
 		typedef void						(HttpReceive::*Handler)();
