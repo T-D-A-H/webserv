@@ -167,6 +167,31 @@ void            Connection::removeClient(PollData& pd) {
     this->fd_map.erase(client_fd);
 }
 
+
+void        Connection::removeTimeoutClients(time_t now) {
+
+	std::vector<int> fds_to_remove;
+    std::map<int, PollData>::iterator it = getFdMap().begin();
+
+	for ( ; it != getFdMap().end(); ++it) {
+
+		PollData &pd = it->second;
+		if (!pd.is_listener)
+			std::cout << "fd: "<< pd.client->getFd() << " -> " << now - pd._start_time << " ms" << std::endl;
+		if (!pd.is_listener && (now - pd._start_time >= CLIENT_TIME_OUT)) {
+			fds_to_remove.push_back(it->first);
+		}
+	}
+		
+	for (size_t i = 0; i < fds_to_remove.size(); i++) {
+		std::map<int, PollData>::iterator it = getFdMap().find(fds_to_remove[i]);
+		if (it != getFdMap().end()) {
+			std::cout << "Cliente con fd: " << it->first << " ha sido eliminado " << std::endl;
+			removeClient(it->second);
+		}
+	}
+}
+
 void              Connection::print_epoll_event(const epoll_event &ev) {
     
     std::cout << "fd: " << ev.data.fd << std::endl;

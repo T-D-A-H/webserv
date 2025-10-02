@@ -13,7 +13,8 @@
 
 #define MAX_EVENTS 1024
 #define TIME_OUT 1000
-#define CLIENT_TIME_OUT 100
+// seconds
+#define CLIENT_TIME_OUT 10
 
 #include "./Servers.hpp"
 #include "./HttpReceive.hpp"
@@ -41,11 +42,12 @@ class Connection : public Servers
         void                            SetupAllServers(Servers& servers);
         void                            populateSockets(Servers& servers);
         void                            createEpollInstance();
-        int                            setNonBlocking(int fd);
+        int                             setNonBlocking(int fd);
         void                            populateServerPollData(int index, int listen_fd);
         void                            addServerEpollEvent(int listen_fd);
         void                            populateClientPollData(Servers& servers, PollData &pd, int client_fd);
         void                            addClientEpollEvent(int client_fd);
+        
 
 
     public:
@@ -58,6 +60,7 @@ class Connection : public Servers
         
         int                             acceptClient(Servers& servers, int fd, PollData &pd);
         void                            removeClient(PollData& pd);
+        void                            removeTimeoutClients(time_t now);
         void                            setEpollFd(int fd);
         int                             getEpollFd() const;
         epoll_event*                    getEpollEvents();
