@@ -247,12 +247,10 @@ bool			HttpReceive::checkRequest(ServerWrapper& server, std::string root, ssize_
 		}
 	}
 	else if (this->_headers["Method"] == "POST") {
-		
 		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
 			return (sendError(405));
 		size_t	extension_pos = this->_headers["Path"].find(".py");
 		if (extension_pos != std::string::npos) {
-		
 			std::string file_extension = this->_headers["Path"].substr(extension_pos);
 			for (size_t i = 0; i < server.getCgiExtensionCount(best_match); i++)
 				if (file_extension == server.getCgiExtensions(best_match, i))

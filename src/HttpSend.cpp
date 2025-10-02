@@ -131,7 +131,6 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 	int		pipe_child[2];
 	pid_t	pid;
 	
-	
 	if (pipe(pipe_parent) == -1) {
 		std::cerr << "Parent pipe() failed: " << strerror(errno) << std::endl;
     	send500(fd, _request); return ;
