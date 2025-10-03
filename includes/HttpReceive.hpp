@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/01 15:38:08 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/03 17:30:20 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,7 @@
 #include <iosfwd>
 #include <dirent.h>
 #include <ctime> 
+#include <string>
 
 class ServerWrapper;
 
@@ -34,6 +35,16 @@ struct Part
     std::string content;
     std::string filename;
 	std::string	content_type;
+};
+
+enum RecvStatus
+{
+	RECV_INCOMPLETE,
+	RECV_COMPLETE,
+	RECV_ERROR,
+	RECV_PAYLOAD_TOO_LARGE_ERROR,
+	RECV_CLOSED,
+	RECV_HEADER_COMPLETE
 };
 
 class HttpReceive {
@@ -51,6 +62,7 @@ class HttpReceive {
 		std::string							_post_body;
 		bool								_is_cgi_script;
 		bool								_is_redirect;
+		bool								_headers_parsed;
 
 		typedef void						(HttpReceive::*Handler)();
 		
@@ -59,7 +71,7 @@ class HttpReceive {
 		~HttpReceive();
 	
 		bool								prepareRequest();
-		bool								receiveRequest();
+		RecvStatus							receiveRequest();
 		bool								saveRequest();
 		
 		
@@ -77,7 +89,7 @@ class HttpReceive {
 		std::string							getPostBody();
 		
 		
-		bool								checkRequest(ServerWrapper&	server, std::string root, ssize_t best_match);
+		bool								checkRequest();
 		ssize_t								getBestMatch();
 		ssize_t								findBestMatch(ServerWrapper& server, std::string req_path);
 		bool								isRedirection();
@@ -86,6 +98,7 @@ class HttpReceive {
 		bool								fileExistsAndReadable(const char* path, int mode);
 		void								printParserHeader(void);
 		std::vector<Part>                   parseMultipart(const std::string& body, const std::string& boundary);
+		void								parseChunkedBody();
 
 		
 		void								sendGetResponse();

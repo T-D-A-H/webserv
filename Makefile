@@ -1,7 +1,7 @@
 NAME = webserv
 
 CPP = c++
-CPPFLAGS = -Wall -Wextra -Werror -std=c++98
+CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -MMD -MP
 
 RM = rm -rf
 
@@ -9,6 +9,7 @@ SRCS = src/main.cpp src/ConfigParser.cpp  src/ServerWrapper.cpp \
 	src/HttpReceive.cpp src/utils/connection_utils.cpp src/HttpSend.cpp src/Connection.cpp
 
 OBJS = $(SRCS:.cpp=.o)
+DEPS = $(OBJS:.o=.d)
 
 all: $(NAME)
 
@@ -19,9 +20,11 @@ $(NAME): $(OBJS)
 	$(CPP) $(CPPFLAGS) $(OBJS) -o $(NAME)
 
 clean:
-	$(RM) $(OBJS)
+	$(RM) $(OBJS) $(DEPS)
 
 fclean:
-	$(RM) $(OBJS) $(NAME)
+	$(RM) $(NAME) $(OBJS) $(DEPS)
 
 re: fclean all
+
+-include $(DEPS)

@@ -36,26 +36,50 @@ int main(int argc, char **argv)
 			}
             else if (!pd.is_listener && (conn.getEpollEvent(i).events & EPOLLIN)) {
 
-				if (!pd.client->receiveRequest() || !pd.client->saveRequest() || !pd.client->prepareRequest()) {
-            	    conn.removeClient(pd);
+				RecvStatus status = pd.client->receiveRequest();
+
+				if (status == RECV_PAYLOAD_TOO_LARGE_ERROR) {
+					pd.client->sendError(413);
+					conn.removeClient(pd);
 					continue ;
 				}
+				else if (status == RECV_ERROR || status == RECV_CLOSED) {
+					conn.removeClient(pd);
+					continue ;
+				}
+				else if (status == RECV_INCOMPLETE) {
+					pd._start_time = std::time(0);
+					continue ;
+				}
+				else if (status == RECV_HEADER_COMPLETE && !pd.client->saveRequest()) {
+					conn.removeClient(pd);
+					continue ;
+				}
+				else if (status == RECV_COMPLETE) {
 
-				std::string method = pd.client->getHeader("Method");
+					if (!pd.client->prepareRequest() || !pd.client->checkRequest()) {
+            	    	conn.removeClient(pd);
+						continue ;
+					}
 
-				if (pd.client->isRedirection())
-					pd.client->sendRedirectResponse();
-				else if (pd.client->isCgiScript())
-					pd.client->sendCgiResponse();
-				else if (method == "GET")
-					pd.client->sendGetResponse();
-				else if (method == "POST")
-					pd.client->sendPostResponse();
-				else if (method == "DELETE")
-					pd.client->sendDeleteResponse();
-				conn.removeClient(pd);
+					std::string method = pd.client->getHeader("Method");
+
+					if (pd.client->isRedirection())
+						pd.client->sendRedirectResponse();
+					else if (pd.client->isCgiScript())
+						pd.client->sendCgiResponse();
+					else if (method == "GET")
+						pd.client->sendGetResponse();
+					else if (method == "POST")
+						pd.client->sendPostResponse();
+					else if (method == "DELETE")
+						pd.client->sendDeleteResponse();
+					conn.removeClient(pd);
+				}
+
             }
         }
     }
 	return (0);
 }
+

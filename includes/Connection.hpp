@@ -14,7 +14,7 @@
 #define MAX_EVENTS 1024
 #define TIME_OUT 1000
 // seconds
-#define CLIENT_TIME_OUT 10
+#define CLIENT_TIME_OUT 3
 
 #include "./Servers.hpp"
 #include "./HttpReceive.hpp"
