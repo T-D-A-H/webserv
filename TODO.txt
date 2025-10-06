@@ -1,13 +1,7 @@
-TODO limits
-
-- Checking the value of errno to adjust the server behaviour is strictly forbidden
-after performing a read or write operation
 
 
-- Just remember that, for chunked requests, your server needs to un-chunk
-them, the CGI will expect EOF as the end of the body.
+- Añadir DELETE DE jaime y compprobar quue no se pueda hacer ../
 
-- The same applies to the output of the CGI. If no content_length is
-returned from the CGI, EOF will mark the end of the returned data.
+- Comprobar que no se pueda borrar otro archivo
 
-
+- 

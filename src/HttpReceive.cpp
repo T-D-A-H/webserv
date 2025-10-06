@@ -238,7 +238,7 @@ bool			HttpReceive::checkRequest() {
 		
 		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
 			return (sendError(405));
-		if (this->_headers["Upload Store"].empty())
+		if (this->_headers.find("Upload Store") == this->_headers.end())
 			return (sendError(500));
 		for (size_t i = 0; i < this->parts.size(); ++i) {
 			std::string full_path = this->_headers["Upload Store"] + this->parts[i].filename;
