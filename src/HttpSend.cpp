@@ -176,7 +176,6 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 		std::vector<std::string> env_strings;
 		std::vector<char*> envp;
 
-		
 		env_strings.push_back("REQUEST_METHOD=" + _request.getHeader("Method"));
 		env_strings.push_back("CONTENT_LENGTH=" + _request.getHeader("Content-Length"));
 		env_strings.push_back("CONTENT_TYPE=" + _request.getHeader("Content-Type"));
@@ -247,7 +246,7 @@ void        HttpSend::sendErr(int fd, HttpReceive& _request, int error_code) {
             << "<body><h1>" << getStatusMsg(error_code) << "</h1></body></html>";	
             body = buf.str();
     }
-    //THIS SHOULD SEND ALSO THE STATUS CODE
+
     std::ostringstream oss;
     oss << "HTTP/1.1 " << error_code << getStatusMsg(error_code) << "\r\n"
     	<< "Content-Type: text/html\r\n"
