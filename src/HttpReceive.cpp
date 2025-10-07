@@ -17,7 +17,10 @@ HttpReceive::HttpReceive(ServerWrapper& _server) : _server(_server) {
 	this->_fd = this->_server.getFD();
 	this->_is_cgi_script = false;
 	this->_is_redirect = false;
-	this->_headers_parsed = false;
+	this->_header_is_complete = false;
+	this->_body_is_complete = false;
+	this->_is_chunked_data = false;
+	this->_total_bytes = 0;
 }
 
 HttpReceive::~HttpReceive() {}
@@ -25,59 +28,59 @@ HttpReceive::~HttpReceive() {}
 
 RecvStatus	HttpReceive::receiveRequest() {
 
-    char buffer[8192];
-    int bytes_received;
-	
+    char	buffer[8192];
+    int		bytes_received;
 	
     while (true) {
+
         bytes_received = recv(getFd(), buffer, sizeof(buffer), 0);
 
         if (bytes_received > 0) {
+			this->_request_complete.append(buffer, bytes_received);
 
-			_request_complete.append(buffer, bytes_received);
+			size_t header_end_pos = this->_request_complete.find("\r\n\r\n");
+			if (!this->_header_is_complete && header_end_pos != std::string::npos) {
+				
+				this->_header_complete = this->_request_complete.substr(0, header_end_pos + 4);
+				if (parseHeader() == false) {
+					return (RECV_ERROR);
+				}
+				this->_header_is_complete = true;
+				this->_request_complete = this->_request_complete.substr(header_end_pos + 4);
+				if (this->_headers.find("Transfer-Encoding") != this->_headers.end() && this->_headers["Transfer-Encoding"] == "chunked")
+					this->_is_chunked_data = true;
+			}
+
+			if (this->_header_is_complete && this->_is_chunked_data && !this->_body_is_complete) {
+				if (parseChunkedBody(this->_request_complete) == false)
+					return (RECV_PAYLOAD_TOO_LARGE_ERROR);
+			}
 
         }
 		else if (bytes_received == 0) {
-		
             return (RECV_CLOSED);
         }
-		else if (bytes_received < 0) {
-
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-				break ;
-			else
-				return (RECV_ERROR);
+		else {
+			break ;
         }
     }
-	size_t header_end = _request_complete.find("\r\n\r\n");
-    if (header_end == std::string::npos) {
+	if (this->_header_is_complete && this->_is_chunked_data && !this->_body_is_complete)
 		return (RECV_INCOMPLETE);
+	if (!this->_is_chunked_data && !this->_request_complete.empty()) {
+		
+		this->_body_complete = this->_request_complete;
 	}
-    if (!this->_headers_parsed) {
-		if (saveRequest() == false)
-			return (RECV_ERROR);
+	if (this->_headers.find("Content-Type") != this->_headers.end() && this->_headers["Content-Type"] == "multipart/form-data") {
+		
+		parseMultipart(this->_body_complete, this->_headers["Boundary"]);
 	}
-    this->_post_body = _request_complete.substr(header_end + 4);
-    if (this->_headers.find("Transfer-Encoding") != this->_headers.end() && this->_headers["Transfer-Encoding"] == "chunked") {
-
-        if (this->_post_body.find("0\r\n\r\n") == std::string::npos)
-            return (RECV_INCOMPLETE);
-		parseChunkedBody();
-    }
-	if (this->_headers.find("Content-Type") != this->_headers.end()) {
-
-		if (this->_headers["Content-Type"] == "multipart/form-data")
-			parseMultipart(this->_post_body, this->_headers["Boundary"]);
-
-	}
-    std::cout << "Total received: " << _request_complete.size() << " bytes\n";
     return (RECV_COMPLETE);
 }
 
 
-bool			HttpReceive::saveRequest() {
+bool			HttpReceive::parseHeader() {
 	
-	std::string			request(this->_request_complete);
+	std::string			request(this->_header_complete);
 	size_t				header_end = request.find("\r\n\r\n");
 	std::istringstream	iss(request);
 	std::string			line;
@@ -86,8 +89,6 @@ bool			HttpReceive::saveRequest() {
 	if (header_end == std::string::npos)
 		return (sendError(400));
 	request  = request.substr(0, header_end);
-	if (request.size() > this->_server.getClientMaxBodySize())
-		return (sendError(413));
 
 	if (!std::getline(iss, line) || line.empty())
 		return (sendError(400));
@@ -135,7 +136,6 @@ bool			HttpReceive::saveRequest() {
 			this->_headers["Boundary"] = boundary_value;
 		}
 	}
-	this->_headers_parsed = true;
 	return (true);
 }
 
@@ -342,42 +342,42 @@ void	HttpReceive::parseMultipart(const std::string& body, const std::string& bou
 	this->parts = parts;
 }
 
-bool HttpReceive::parseChunkedBody() {
+bool	HttpReceive::parseChunkedBody(std::string& _body_recv) {
 
-    size_t pos = 0;
     std::string new_body;
-	unsigned long total_bytes  = 0;
 
-    while (true) {
+	while (true) {
 
-        size_t crlf_pos = this->_post_body.find("\r\n", pos);
-        if (crlf_pos == std::string::npos)
-            break ;
+		size_t crlf_pos = _body_recv.find("\r\n");
+		if (crlf_pos == std::string::npos)
+		    return (true);
 
-        std::string hex_str = this->_post_body.substr(pos, crlf_pos - pos);
-        unsigned long chunk_size = strtoul(hex_str.c_str(), NULL, 16);
-		total_bytes += chunk_size;
-		if (total_bytes > this->_server.getClientMaxBodySize()) {
-			return (false);
-		}
-        pos = crlf_pos + 2;
+		std::string hex_str = _body_recv.substr(0, crlf_pos);
+		unsigned long chunk_size = strtoul(hex_str.c_str(), NULL, 16);
+		if (chunk_size == 0) {
+    	    if (_body_recv.size() < crlf_pos + 4)
+				return (true);
 
-        if (chunk_size == 0) {
-            break;
-        }
+            if (_body_recv.substr(crlf_pos, 4) == "0\r\n\r\n" || _body_recv.substr(crlf_pos + 2, 2) == "\r\n") {
+    	        this->_body_is_complete = true;
+				std::ostringstream oss;
+				oss << this->_total_bytes;
+    	        this->_headers["Content-Length"] = oss.str();
+				_body_recv.erase(0, crlf_pos + 4);
+    	        return (true);
+    	    }
+    	    return (true);
+    	}
+		if (_body_recv.size() < crlf_pos + 2 + chunk_size + 2)
+    	    return (true);
 
-        if (pos + chunk_size  > this->_post_body.size())
-            break;
-
-        new_body.append(this->_post_body, pos, chunk_size);
-
-        pos += chunk_size + 2;
-    }
-
-    this->_post_body = new_body;
-    std::ostringstream oss;
-    oss << _post_body.size();
-    this->_headers["Content-Length"] = oss.str();
+		size_t start = crlf_pos + 2;
+		this->_body_complete.append(_body_recv, start, chunk_size);
+		this->_total_bytes += chunk_size;
+		_body_recv.erase(0, start + chunk_size + 2);
+		if (this->_total_bytes > this->_server.getClientMaxBodySize())
+    		return (false);
+	}
 	return (true);
 }
 
@@ -506,9 +506,9 @@ void			HttpReceive::setHeader(std::string index,std::string value) {this->_heade
 
 void			HttpReceive::setFullPath(const std::string& full_path) {this->_full_path = full_path;}
 
-size_t			HttpReceive::getPostBodySize() {return (this->_post_body.size());}
+size_t			HttpReceive::getPostBodySize() {return (this->_body_complete.size());}
 
-std::string		HttpReceive::getPostBody() {return (this->_post_body);}
+std::string		HttpReceive::getPostBody() {return (this->_body_complete);}
 
 void			HttpReceive::sendAutoResponse(const std::string &direction_path) {HttpSend::sendAutoResponse(getFd(), *this, direction_path); }
 		

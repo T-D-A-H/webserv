@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/06 12:29:30 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/07 15:58:52 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,7 +44,8 @@ enum RecvStatus
 	RECV_ERROR,
 	RECV_PAYLOAD_TOO_LARGE_ERROR,
 	RECV_CLOSED,
-	RECV_HEADER_COMPLETE
+	RECV_HEADER_COMPLETE,
+	RECV_BODY_COMPLETE
 };
 
 class HttpReceive {
@@ -58,11 +59,17 @@ class HttpReceive {
 		std::string							_full_path;
 		ServerWrapper&						_server;
 		ssize_t								_best_match;
+		
 		std::string							_request_complete;
-		std::string							_post_body;
+		std::string							_header_complete;
+		std::string							_body_complete;
+		bool								_header_is_complete;
+		bool								_body_is_complete;
+		bool								_is_chunked_data;
+		unsigned long						_total_bytes;
+		
 		bool								_is_cgi_script;
 		bool								_is_redirect;
-		bool								_headers_parsed;
 
 		typedef void						(HttpReceive::*Handler)();
 		
@@ -72,7 +79,7 @@ class HttpReceive {
 	
 		bool								prepareRequest();
 		RecvStatus							receiveRequest();
-		bool								saveRequest();
+		bool								parseHeader();
 		
 		
 		void								setBestMatch(ssize_t _best_match);	
@@ -98,7 +105,7 @@ class HttpReceive {
 		bool								fileExistsAndReadable(const char* path, int mode);
 		void								printParserHeader(void);
 		void								parseMultipart(const std::string& body, const std::string& boundary);
-		bool								parseChunkedBody();
+		bool								parseChunkedBody(std::string& _body_recv);
 
 		
 		void								sendGetResponse();
