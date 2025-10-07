@@ -187,7 +187,7 @@ bool			HttpReceive::checkRequest() {
 	size_t			best_match = getBestMatch();
 	std::string		root = this->_headers["Root"];
 
-/* 	if (this->_headers.find("Method") == this->_headers.end() || this->_headers.find("Path") == this->_headers.end() || this->_headers.find("Host") == this->_headers.end())
+	if (this->_headers.find("Method") == this->_headers.end() || this->_headers.find("Path") == this->_headers.end() || this->_headers.find("Host") == this->_headers.end())
 		return (sendError(400));
 	if (this->_headers.find("Method") != this->_headers.end() && (this->_headers["Method"] != "GET" && this->_headers["Method"] != "POST" && this->_headers["Method"] != "DELETE"))
 		return (sendError(501));
@@ -204,7 +204,7 @@ bool			HttpReceive::checkRequest() {
 	if (checkContentLength(this->_headers["Content-Length"].c_str(), server.getMaxClientSize()) == -1)
 		return (sendError(413));
 	if (this->_headers["Method"] == "POST" && this->_headers.find("Content-Type") == this->_headers.end())
-		return (sendError(415)); */
+		return (sendError(415));
 	if (server.getRedirect(best_match)) {
 
 		this->_is_redirect = true;
