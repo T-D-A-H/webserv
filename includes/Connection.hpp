@@ -74,6 +74,8 @@ class Connection : public Servers
 
         class EpollInstanceException: public std::exception {public:const char* what() const throw();};
         class AddEpollInstanceException: public std::exception {public:const char* what() const throw();};
+
+        
 };
 
 

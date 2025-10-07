@@ -3,18 +3,40 @@
 #include "../includes/Servers.hpp"
 #include "../includes/Connection.hpp"
 
+Servers* g_servers = NULL;
+Connection* g_conn = NULL;
+
+void handle_sigint(int sig) {
+	std::cout << "\nSeñal SIGINT recibida. Limpiando recursos...\n" << std::endl;
+
+    if (g_conn) {
+        g_conn->getFdMap().clear(); // limpiar clientes
+    }
+
+    if (g_servers) {
+        g_servers->clearServers(); // cerrar sockets y limpiar vectores
+    }
+
+	(void)sig;
+	std::cout << "Recursos liberados. Saliendo.\n" << std::endl;
+    exit(0);
+}
+
 int main(int argc, char **argv)
 {
-
+	signal(SIGINT, handle_sigint);
 
 	try
 	{
 		std::string conf_file = (argc < 2) ? DEFAULT_CONF_FILE : argv[1];
     	if (argc > 2)
         	return (std::cout << ERROR_ARGUMENTS << std::endl, 1);
-			
-    	Servers servers(conf_file);
-    	Connection conn(servers);
+
+        Servers servers(conf_file);
+        g_servers = &servers;
+
+        Connection conn(servers);
+        g_conn = &conn;
 
 		while (true) {
 
@@ -51,7 +73,7 @@ int main(int argc, char **argv)
 						continue ;
 					}
 					else if (status == RECV_COMPLETE) {
-
+						
 						if (!pd.client->prepareRequest() || !pd.client->checkRequest()) {
     	        	    	if (pd.client->getHeader("Connection") != "keep-alive") {
 								conn.removeClient(pd);
