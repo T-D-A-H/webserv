@@ -138,6 +138,20 @@ bool			HttpReceive::saveRequest() {
 	return (true);
 }
 
+void HttpReceive::resetForNextRequest() {
+    memset(_request, 0, BUFFER_SIZE);  
+    _headers.clear();
+    parts.clear();
+    if (_file.is_open()) _file.close();
+    _full_path.clear();
+    _request_complete.clear();
+    _post_body.clear();
+    _is_cgi_script = false;
+    _is_redirect = false;
+    _headers_parsed = false;
+    _best_match = -1;
+}
+
 bool			HttpReceive::prepareRequest() {
 	
 	std::string				 req_path   = this->_headers["Path"];

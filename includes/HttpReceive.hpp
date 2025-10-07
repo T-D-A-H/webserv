@@ -6,7 +6,7 @@
 /*   By: jaimesan <jaimesan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/07 13:08:54 by jaimesan         ###   ########.fr       */
+/*   Updated: 2025/10/07 14:09:21 by jaimesan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,7 +63,6 @@ class HttpReceive {
 		bool								_is_cgi_script;
 		bool								_is_redirect;
 		bool								_headers_parsed;
-		
 
 		typedef void						(HttpReceive::*Handler)();
 		
@@ -75,7 +74,7 @@ class HttpReceive {
 		RecvStatus							receiveRequest();
 		bool								saveRequest();
 		
-		
+		void 								resetForNextRequest();
 		void								setBestMatch(ssize_t _best_match);	
 		void								setFd(int _fd);
 		void								setHeader(std::string index, std::string path);

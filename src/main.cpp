@@ -44,7 +44,6 @@ int main(int argc, char **argv)
 
 					if (status == RECV_PAYLOAD_TOO_LARGE_ERROR || status == RECV_ERROR || status == RECV_CLOSED) {
 						if (status == RECV_PAYLOAD_TOO_LARGE_ERROR) pd.client->sendError(413);
-						conn.removeClient(pd);
 						continue ;
 					}
 					else if (status == RECV_INCOMPLETE) {
@@ -54,7 +53,11 @@ int main(int argc, char **argv)
 					else if (status == RECV_COMPLETE) {
 
 						if (!pd.client->prepareRequest() || !pd.client->checkRequest()) {
-    	        	    	conn.removeClient(pd);
+    	        	    	if (pd.client->getHeader("Connection") != "keep-alive") {
+								conn.removeClient(pd);
+							} else {
+								pd._current_time = std::time(0);
+							}
 							continue ;
 						}
 
@@ -70,9 +73,16 @@ int main(int argc, char **argv)
 							pd.client->sendPostResponse();
 						else if (method == "DELETE")
 							pd.client->sendDeleteResponse();
-						conn.removeClient(pd);
-					}
 
+						if (pd.client->getHeader("Connection") != "keep-alive") {
+							close(pd.fd);
+							conn.removeClient(pd);
+						}
+						else if (pd.client->getHeader("Connection") == "keep-alive") {
+							pd.client->resetForNextRequest();
+							pd._current_time = std::time(0);
+						}
+					}
     	        }
     	    }
     	}
