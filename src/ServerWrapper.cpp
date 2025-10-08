@@ -383,15 +383,13 @@ void                ServerWrapper::setupSocket() {
     this->_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (this->_fd == -1) {
 
-		std::cerr << "Failed to create socket. errno: " << errno << std::endl;
-		exit(EXIT_FAILURE);
+		throw (std::runtime_error("Failed to create socket."));
 	}
 	int opt = 1;
 	if (setsockopt(this->_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 
-		std::cerr << "setsockopt(SO_REUSEADDR) failed. errno: " << errno << std::endl;
 		close(this->_fd);
-		exit(EXIT_FAILURE);
+		throw (std::runtime_error("setsockopt(SO_REUSEADDR) failed."));
 	}
 }
 
@@ -405,18 +403,17 @@ void            ServerWrapper::setupSockAddr() {
 void ServerWrapper::bindAndListen() {
 
 	if (bind(this->_fd, (struct sockaddr*)&_server_adress, sizeof(struct sockaddr_in)) < 0) {
-
-		std::cerr << "Failed to bind to port " << ntohs(_server_adress.sin_port)
-		          << ". errno: " << errno << std::endl;
-		exit(EXIT_FAILURE);
+        close(this->_fd);
+        std::ostringstream oss;
+        oss << ntohs(_server_adress.sin_port);
+        throw (std::runtime_error("Failed to bind to port " + oss.str()));
 	}
 	if (listen(this->_fd, this->_client_max_body_size) < 0) {
 
-		std::cerr << "Failed to listen on socket. errno: " << errno << std::endl;
-		exit(EXIT_FAILURE);
+        close(this->_fd);
+        throw (std::runtime_error("Failed to listen on socket."));
 	}
     else {
-
 		std::cout << "Waiting for connection..." << std::endl;
 	}
 }

@@ -42,7 +42,6 @@ RecvStatus	HttpReceive::receiveRequest() {
 			size_t header_end_pos = _request_parse.find("\r\n\r\n");
 			if (header_state == H_INCOMPLETE && header_end_pos != std::string::npos) {
 				
-				
 				if (!parseHeader(_request_parse.substr(0, header_end_pos)))
 					return (RECV_ERROR);
 				header_state = H_COMPLETE;
@@ -70,26 +69,21 @@ RecvStatus	HttpReceive::receiveRequest() {
 	if (header_state == H_COMPLETE &&  body_state == B_INCOMPLETE && body_type == CHUNKED) {
 		return (RECV_INCOMPLETE);
 	}
-	if (body_type != CHUNKED && !_request_parse.empty()) {
+	if (_headers.find("Content-Length") != _headers.end() && _body_complete.empty()) {
 		_body_complete = _request_parse;
 	}
 	if (_headers.find("Content-Type") != _headers.end() && _headers["Content-Type"] == "multipart/form-data") {
-		body_type = MULTIPART;
 		parseMultipart(_body_complete, _headers["Boundary"]);
-	}
-	if (_headers.find("Content-Type") != _headers.end() && _headers["Content-Type"] == "plain/txt") {
-		body_type = PLAIN;
 	}
     return (RECV_COMPLETE);
 }
+
 
 bool			HttpReceive::parseHeader(std::string header_complete) {
 	
 	std::string			request(header_complete);
 	std::istringstream	iss(request);
 	std::string			line;
-
-
 
 	if (!std::getline(iss, line) || line.empty())
 		return (sendError(400));
@@ -138,22 +132,6 @@ bool			HttpReceive::parseHeader(std::string header_complete) {
 		}
 	}
 	return (true);
-}
-
-void HttpReceive::resetForNextRequest() {
-    memset(_request, 0, BUFFER_SIZE);  
-    _headers.clear();
-    parts.clear();
-    if (_file.is_open()) _file.close();
-    _full_path.clear();
-    _request_parse.clear();
-    _body_complete.clear();
-    _is_cgi_script = false;
-    _is_redirect = false;
-    header_state = H_INCOMPLETE;
-	body_state = B_INCOMPLETE;
-	body_type = UNSET;
-    _best_match = -1;
 }
 
 bool			HttpReceive::prepareRequest() {
@@ -208,10 +186,10 @@ bool			HttpReceive::checkRequest() {
 		return (sendError(400));
 	if (this->_headers.find("Method") != this->_headers.end() && (this->_headers["Method"] != "GET" && this->_headers["Method"] != "POST" && this->_headers["Method"] != "DELETE"))
 		return (sendError(501));
-	if (this->_headers["Path"].size() >= MAX_URI_SIZE)
-		return (sendError(414));
 	if (this->_headers["Path"].find("../") != std::string::npos)
 		return (sendError(403));
+	if (this->_headers["Path"].size() >= MAX_URI_SIZE)
+		return (sendError(414));
 	if (!isValidHttpVersion(this->_headers["Version"]))
 		return (sendError(505));
 	if (!this->_headers["Content-Length"].empty() && !isNumber(this->_headers["Content-Length"]))
@@ -398,6 +376,23 @@ bool	HttpReceive::parseChunkedBody(std::string& _body_recv) {
     		return (false);
 	}
 	return (true);
+}
+
+void HttpReceive::resetForNextRequest() {
+	
+    memset(_request, 0, BUFFER_SIZE);  
+    _headers.clear();
+    parts.clear();
+    if (_file.is_open()) _file.close();
+    _full_path.clear();
+    _request_parse.clear();
+    _body_complete.clear();
+    _is_cgi_script = false;
+    _is_redirect = false;
+    header_state = H_INCOMPLETE;
+	body_state = B_INCOMPLETE;
+	body_type = UNSET;
+    _best_match = -1;
 }
 
 bool			HttpReceive::fileExistsAndReadable(const char* path, int mode) {

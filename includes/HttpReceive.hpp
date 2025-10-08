@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/08 12:53:53 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/08 16:02:42 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,17 +43,14 @@ enum RecvStatus
 	RECV_COMPLETE,
 	RECV_ERROR,
 	RECV_PAYLOAD_TOO_LARGE_ERROR,
-	RECV_CLOSED,
-	RECV_HEADER_COMPLETE,
-	RECV_BODY_COMPLETE
+	RECV_CLOSED
 };
 
 enum HeaderStatus {H_INCOMPLETE, H_COMPLETE};
 
 enum BodyStatus {B_INCOMPLETE, B_COMPLETE};
 
-
-enum BodyTransferType {UNSET, PLAIN, CHUNKED, MULTIPART};
+enum BodyTransferType {UNSET, SET, PLAIN, CHUNKED, MULTIPART};
 
 
 class HttpReceive {

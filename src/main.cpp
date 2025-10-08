@@ -29,22 +29,19 @@ void handle_sigint(int sig) {
 
 	(void)sig;
 	std::cout << "Recursos liberados. Saliendo.\n" << std::endl;
-    exit(0);
 }
 
 int	main(int argc, char **argv)
 {
 	
-
 	try
 	{
 		std::string conf_file = (argc < 2) ? DEFAULT_CONF_FILE : argv[1];
     	if (argc > 2)
-        	return (std::cout << ERROR_ARGUMENTS << std::endl, 1);
+			return (std::cout << ERROR_ARGUMENTS << std::endl, 1);
 
-        servers = new Servers(conf_file);
-        conn = new Connection(*servers);
-
+		servers = new Servers(conf_file);
+		conn = new Connection(*servers);
 
 		signal(SIGINT, handle_sigint);
 		while (true) {
@@ -52,6 +49,7 @@ int	main(int argc, char **argv)
 			int ready_fds = epoll_wait(conn->getEpollFd(), conn->getEpollEvents(), MAX_EVENTS, TIME_OUT);
 			if (ready_fds == -1) {
 				std::cerr << "epoll_wait failed: " << strerror(errno) << std::endl;
+				throw (std::runtime_error("LOL"));
 			}
 
 			time_t now = std::time(0);
@@ -120,6 +118,7 @@ int	main(int argc, char **argv)
 	}
 	catch(const std::exception& e)
 	{
+		handle_sigint(1);
 		std::cerr << e.what() << '\n';
 	}
 	

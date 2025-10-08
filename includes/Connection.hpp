@@ -78,5 +78,4 @@ class Connection : public Servers
         
 };
 
-
 #endif
