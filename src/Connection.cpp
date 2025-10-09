@@ -48,6 +48,7 @@ void              Connection::createEpollInstance() {
 
 void              Connection::populateSockets(Servers& servers) {
 
+    int server_index = 0;
     for (size_t i = 0; i < servers.size(); i++) {
 
         for (size_t j = 0; j < servers[i].getSocketsSize(); j++) {
@@ -56,9 +57,26 @@ void              Connection::populateSockets(Servers& servers) {
             setNonBlocking(listen_fd);
             addServerEpollEvent(listen_fd);
             populateServerPollData(i, listen_fd);
-            std::cout << "✓ Server listening on fd " << listen_fd << std::endl;
+            printAddServer(server_index, servers[i], listen_fd);
+            server_index++;
         }
     }
+}
+
+
+// Server[127.0.0.1:9998] - connected on socket(6)
+void Connection::printAddServer(int server_index, int socket_index, ServerWrapper& server, int listen_fd) {
+
+    std::cout << COLORS[server_index % 8] << "Server[" 
+    << server.getIps(socket_index) << ":" 
+    << server.getPorts(socket_index) << "] - " 
+    << COLOR_RESET << CYAN << "connected on socket("
+    << listen_fd << ")." << COLOR_RESET << std::endl;
+}
+
+void  Connection::printAcceptClient(int client_fd) {
+
+    std::cout << 
 }
 
 void                Connection::addServerEpollEvent(int listen_fd) {
@@ -81,6 +99,7 @@ void                Connection::populateServerPollData(int server_index, int lis
     pd.server_index = server_index;
     pd.client = NULL;
     pd.client_allocated = false;
+    pd.fd = listen_fd;
     this->fd_map[listen_fd] = pd;
 }
 
@@ -108,7 +127,8 @@ int            Connection::acceptClient(Servers& servers, int fd, PollData &pd) 
     }
     addClientEpollEvent(client_fd);
     populateClientPollData(servers, pd, client_fd);
-    std::cout << "✓ New client " << client_fd << " accepted on server fd " << fd << std::endl;
+
+    printAcceptClient(fd_map, client_fd);
     return (0);
 }
 
@@ -156,10 +176,9 @@ int                 Connection::setNonBlocking(int fd) {
 void            Connection::removeClient(PollData& pd) {
 
     if (pd.client == NULL)
-        return;
+        return ;
     
     int client_fd = pd.client->getFd();
-    std::cout << "Cliente con fd: " << client_fd << " ha sido eliminado " << std::endl;
     
     if (client_fd != -1) {
         epoll_ctl(getEpollFd(), EPOLL_CTL_DEL, client_fd, NULL);
@@ -181,8 +200,9 @@ void        Connection::removeTimeoutClients(time_t now) {
 	for ( ; it != getFdMap().end(); ++it) {
 
 		PollData &pd = it->second;
-		if (!pd.is_listener )
-			std::cout << "fd: "<< pd.client->getFd() << " -> " << now - pd._current_time << " ms" << std::endl;
+		if (!pd.is_listener ) {
+            printTimeoutClient()
+        }
 		if (!pd.is_listener && (now - pd._current_time >= CLIENT_REQUEST_TIME_OUT)) {
 			fds_to_remove.push_back(it->first);
 		}

@@ -20,6 +20,12 @@
 #include "./Servers.hpp"
 #include "./HttpReceive.hpp"
 
+static int COLOURS[] = {31, 32, 33, 34}
+static int DISCONNECTED = red;
+static int CONNECTED = green;
+static int TIMEOUT = yellow;
+
+
 struct PollData
 {
     int             fd;
@@ -51,7 +57,7 @@ class Connection : public Servers
         void                            populateClientPollData(Servers& servers, PollData &pd, int client_fd);
         void                            addClientEpollEvent(int client_fd);
         
-
+        void                            printAddServer(int index,  ServerWrapper& server, int listen_fd);
 
     public:
         Connection(Servers& servers);
