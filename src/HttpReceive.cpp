@@ -206,74 +206,113 @@ bool			HttpReceive::checkRequest() {
 		this->_is_redirect = true;
 		return (true);
 	}
-	else if (this->_headers["Method"] == "GET") {
+	const std::string &method = this->_headers["Method"];
 
-		if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
-			return (sendError(405));
-		if (isDirectory(this->_full_path.c_str())) {
-			if (server.getAutoIndex(best_match))
-				return sendAutoResponse(this->_full_path), true;
-			else
-				return sendError(404);
-		}
-		if (this->_full_path.empty() && server.getAutoIndex(best_match) == true)
-			return (sendAutoResponse(root), true);
-		else if (this->_full_path.empty() && server.getAutoIndex(best_match) == false)
-			return (sendError(404));
-			
-		if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
-			return (false);
-		this->_file.open(this->_full_path.c_str());
-		if (!this->_file)
-			return (sendError(404)); 
-		return (true);
+	if (method == "GET")
+		return (methodGET(server, best_match));
 
-	}
-	else if (this->_headers.find("Boundary") != this->_headers.end() && this->_headers["Method"] == "POST") {
-		
-		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
-			return (sendError(405));
-		if (this->_headers.find("Upload Store") == this->_headers.end())
-			return (sendError(500));
-		for (size_t i = 0; i < this->parts.size(); ++i) {
-			std::string full_path = this->_headers["Upload Store"] + this->parts[i].filename;
-			std::ofstream file_post(full_path.c_str());
-			if (!file_post)
-				return (std::cerr << ERROR_CREATE_FILE << full_path << std::endl, false);
-			file_post.write(parts[i].content.data(), parts[i].content.size());
-			file_post.close();
-		}
-	}
-	else if (this->_headers["Method"] == "POST") {
-		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
-			return (sendError(405));
-		size_t	extension_pos = this->_headers["Path"].find(".py");
-		if (extension_pos != std::string::npos) {
-			std::string file_extension = this->_headers["Path"].substr(extension_pos);
-			for (size_t i = 0; i < server.getCgiExtensionCount(best_match); i++)
-				if (file_extension == server.getCgiExtensions(best_match, i))
-					this->_is_cgi_script = true;
-		}
-	}
-	else if (this->_headers["Method"] == "DELETE") {
-		std::string path_to_delete;
-		if (this->_headers.find("Upload Store") != this->_headers.end()) {
-			std::string filename = this->_headers["Path"].substr(this->_headers["Path"].find_last_of("/") + 1);
-			path_to_delete = this->_headers["Upload Store"] + filename;
-		} else {
-			return (sendError(404));
-		}
-		if (isMethodAllowed(server, best_match, this->_headers["Method"]) == false)
-			return (sendError(405));
+	else if (this->_headers.find("Boundary") != this->_headers.end()
+	 && method == "POST")
+		return (methodPUT(server, best_match));
 
-		if (!fileExistsAndReadable(path_to_delete.c_str(), 0)) {
+	else if (method == "POST")
+		return (methodPOST(server, best_match));
+
+	else if (method == "DELETE")
+		return (methodDELETE(server, best_match));
+
+	return (sendError(501));
+}
+
+bool	HttpReceive::methodGET(ServerWrapper &server, size_t best_match) {
+
+	std::string root = this->_headers["Root"];
+
+	if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
+		return (sendError(405));
+
+	if (isDirectory(this->_full_path.c_str())) {
+		if (server.getAutoIndex(best_match))
+			return (sendAutoResponse(this->_full_path), true);
+		else
 			return (sendError(404));
-		}
-		if (std::remove(path_to_delete.c_str()) != 0)
-			return sendError(403);
+	}
+
+	if (this->_full_path.empty() && server.getAutoIndex(best_match))
+		return (sendAutoResponse(root), true);
+
+	else if (this->_full_path.empty() && !server.getAutoIndex(best_match))
+		return (sendError(404));
+
+	if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
+		return (false);
+
+	this->_file.open(this->_full_path.c_str());
+	if (!this->_file)
+		return (sendError(404));
+
+	return (true);
+}
+
+bool	HttpReceive::methodPUT(ServerWrapper &server, size_t best_match) {
+
+	if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
+		return (sendError(405));
+
+	if (this->_headers.find("Upload Store") == this->_headers.end())
+		return (sendError(500));
+
+	for (size_t i = 0; i < this->parts.size(); ++i) {
+		std::string full_path = this->_headers["Upload Store"] + this->parts[i].filename;
+		std::ofstream file_post(full_path.c_str());
+		if (!file_post)
+			return (std::cerr << ERROR_CREATE_FILE << full_path << std::endl, false);
+		file_post.write(parts[i].content.data(), parts[i].content.size());
+		file_post.close();
 	}
 	return (true);
 }
+
+bool	HttpReceive::methodPOST(ServerWrapper &server, size_t best_match) {
+
+	if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
+		return (sendError(405));
+
+	size_t extension_pos = this->_headers["Path"].find(".py");
+	if (extension_pos != std::string::npos) {
+		std::string file_extension = this->_headers["Path"].substr(extension_pos);
+		for (size_t i = 0; i < server.getCgiExtensionCount(best_match); ++i) {
+			if (file_extension == server.getCgiExtensions(best_match, i))
+				this->_is_cgi_script = true;
+		}
+	}
+	return (true);
+}
+
+
+bool	HttpReceive::methodDELETE(ServerWrapper &server, size_t best_match) {
+
+	std::string path_to_delete;
+
+	if (this->_headers.find("Upload Store") != this->_headers.end()) {
+		std::string filename = this->_headers["Path"].substr(this->_headers["Path"].find_last_of("/") + 1);
+		path_to_delete = this->_headers["Upload Store"] + filename;
+	}
+	else
+		return (sendError(404));
+
+	if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
+		return (sendError(405));
+
+	if (!fileExistsAndReadable(path_to_delete.c_str(), 0))
+		return (sendError(404));
+
+	if (std::remove(path_to_delete.c_str()) != 0)
+		return (sendError(403));
+
+	return (true);
+}
+
 
 void	HttpReceive::parseMultipart(const std::string& body, const std::string& boundary) {
 	
