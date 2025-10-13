@@ -34,7 +34,7 @@ void	handle_sigint(int sig) {
 	(void)sig;
 }
 
-int	main(int argc, char **argv)
+int		main(int argc, char **argv)
 {
 	
 	try
@@ -51,13 +51,11 @@ int	main(int argc, char **argv)
 
 			int ready_fds = epoll_wait(conn->getEpollFd(), conn->getEpollEvents(), MAX_EVENTS, 1000);
 			if (ready_fds == -1) {
-				throw (std::runtime_error("epoll_wait failed"));
+				break ;
 			}
-
-			time_t now = std::time(0);
-			conn->removeTimeoutClients(now);
-
+			conn->removeTimeoutClients(std::time(0));	
 			for (int i = 0; i < ready_fds; i++) {
+
     	        int fd = conn->getEpollEvent(i).data.fd;
 				if (conn->getFdMap().find(fd) == conn->getFdMap().end())
 					continue ;

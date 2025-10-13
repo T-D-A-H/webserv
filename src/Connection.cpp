@@ -194,7 +194,8 @@ void        Connection::removeTimeoutClients(time_t now) {
             int time_left = CLIENT_REQUEST_TIME_OUT - time_elapsed;
             if (time_left < 0)
                 time_left = 0;
-            logger(it->second.fd, CLIENT_TIME_OUT, time_left);
+            if (time_left < CLIENT_REQUEST_TIME_OUT)
+                logger(it->second.fd, CLIENT_TIME_OUT, time_left + 1);
         }
 		if (!pd.is_listener && (now - pd._current_time >= CLIENT_REQUEST_TIME_OUT)) {
 			fds_to_remove.push_back(it->first);
@@ -220,21 +221,6 @@ void    Connection::modifyEpollEvent(int fd, uint32_t events) {
 
 
 void            Connection::logger(int target_fd, int flag, int time_left) { Logger::logger(this->fd_map[target_fd], flag, time_left); };
-
-void              Connection::print_epoll_event(const epoll_event &ev) {
-    
-    std::cout << "fd: " << ev.data.fd << std::endl;
-    std::cout << "events: ";
-
-    if (ev.events & EPOLLIN)  std::cout << "EPOLLIN ";
-    if (ev.events & EPOLLOUT) std::cout << "EPOLLOUT ";
-    if (ev.events & EPOLLERR) std::cout << "EPOLLERR ";
-    if (ev.events & EPOLLHUP) std::cout << "EPOLLHUP ";
-    if (ev.events & EPOLLET) std::cout << "EPOLLET ";
-    if (ev.events & EPOLLONESHOT) std::cout << "EPOLLONESHOT ";
-
-    std::cout << std::endl;
-}
 
 void                Connection::setEpollFd(int fd) {this->epoll_fd = fd;}
 

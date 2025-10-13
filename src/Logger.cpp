@@ -80,7 +80,7 @@ std::string     Logger::getTimestamp()
 	struct tm *lt = std::localtime(&now);
 
 	char buf[32];
-	std::strftime(buf, sizeof(buf), "[%H:%M:%S:%d:%m:%Y] - ", lt);
+	std::strftime(buf, sizeof(buf), "[%H:%M:%S|%d/%m/%Y] - ", lt);
 
 	return (std::string(buf));
 }

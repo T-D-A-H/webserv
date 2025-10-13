@@ -45,5 +45,13 @@ bool                                isNumber(const std::string &s);
 int                                 checkContentLength(const char *num_str, unsigned long max_size);
 bool                                isValidHeaderName(std::string header_name);
 bool                                isValidHeaderValue(std::string header_value);
-
+bool                                isMissingRequiredHeaders(std::map<std::string, std::string> &headers);
+bool                                isUnsupportedMethod(std::map<std::string, std::string> &headers);
+bool                                isPathTraversal(std::map<std::string, std::string> &headers);
+bool                                isUriTooLong(std::map<std::string, std::string> &headers);
+bool                                isInvalidHttpVersion(std::map<std::string, std::string> &headers);
+bool                                isInvalidContentLength(std::map<std::string, std::string> &headers); 
+bool                                isMissingContentLengthForPost(std::map<std::string, std::string> &headers);
+bool                                isContentLengthTooLarge(std::map<std::string, std::string> &headers, size_t max_client_size);
+bool                                isMissingContentTypeForPost(std::map<std::string, std::string> &headers);
 #endif

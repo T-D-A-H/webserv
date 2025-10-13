@@ -413,9 +413,7 @@ void ServerWrapper::bindAndListen() {
         close(this->_fd);
         throw (std::runtime_error("Failed to listen on socket."));
 	}
-    else {
-		std::cout << "Waiting for connection..." << std::endl;
-	}
+
 }
 
 void            ServerWrapper::setupServerConfig(const std::vector<std::string>& _server_name, uint16_t _port, in_addr_t _host,

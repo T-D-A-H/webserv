@@ -51,9 +51,6 @@ class Connection : public Servers
         void                            populateClientPollData(Servers& servers, PollData &pd, int client_fd);
         void                            addClientEpollEvent(int client_fd);
 
-        
-        void                            printAddServer(int index,  ServerWrapper& server, int listen_fd);
-
     public:
         Connection(Servers& servers);
         Connection(const Connection& src);
@@ -71,7 +68,6 @@ class Connection : public Servers
         std::map<int, PollData>&        getFdMap();
         const std::map<int, PollData>&  getFdMap() const;
 
-        void                            print_epoll_event(const epoll_event &ev);
         void                            logger(int target_fd, int flag, int time_left);
 
         class EpollInstanceException: public std::exception {public:const char* what() const throw();};

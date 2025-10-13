@@ -71,7 +71,6 @@ class ConfigParser
         void                        rootToken(ParserVariables& vars);
         void                        defaultServerRoot(ParserVariables& vars);
         void                        defaultServerIndex(ParserVariables& vars);
-        void                        printParsedConfig(const std::vector<ServerConfig>& servers);
         bool                        isMisconfiguredLocation(ParserVariables& vars);
         bool                        isMisconfiguredServer(ParserVariables& vars);
 
