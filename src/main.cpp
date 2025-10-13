@@ -49,22 +49,20 @@ int	main(int argc, char **argv)
 		signal(SIGINT, handle_sigint);
 		while (true) {
 
-			int ready_fds = epoll_wait(conn->getEpollFd(), conn->getEpollEvents(), MAX_EVENTS, TIME_OUT);
+			int ready_fds = epoll_wait(conn->getEpollFd(), conn->getEpollEvents(), MAX_EVENTS, 1000);
 			if (ready_fds == -1) {
-				break ;
+				throw (std::runtime_error("epoll_wait failed"));
 			}
 
 			time_t now = std::time(0);
 			conn->removeTimeoutClients(now);
 
 			for (int i = 0; i < ready_fds; i++) {
-
     	        int fd = conn->getEpollEvent(i).data.fd;
 				if (conn->getFdMap().find(fd) == conn->getFdMap().end())
 					continue ;
 
 				PollData &pd = conn->getFdMap()[fd];
-
     	        if (pd.is_listener && (conn->getEpollEvent(i).events & EPOLLIN)) {
 					if (conn->acceptClient(*servers, fd, pd) == -1)
 						continue ;
@@ -74,7 +72,8 @@ int	main(int argc, char **argv)
 					RecvStatus status = pd.client->receiveRequest();
 
 					if (status == RECV_PAYLOAD_TOO_LARGE_ERROR || status == RECV_ERROR || status == RECV_CLOSED) {
-						if (status == RECV_PAYLOAD_TOO_LARGE_ERROR) pd.client->sendError(413);
+						if (status == RECV_PAYLOAD_TOO_LARGE_ERROR)
+							pd.client->sendError(413);
 						continue ;
 					}
 					else if (status == RECV_INCOMPLETE) {
@@ -89,32 +88,34 @@ int	main(int argc, char **argv)
 							} else {
 								pd._current_time = std::time(0);
 							}
-							continue ;
+							continue;
 						}
-
-						std::string method = pd.client->getHeader("Method");
-
-						if (pd.client->isRedirection())
-							pd.client->sendRedirectResponse();
-						else if (pd.client->isCgiScript())
-							pd.client->sendCgiResponse();
-						else if (method == "GET")
-							pd.client->sendGetResponse();
-						else if (method == "POST")
-							pd.client->sendPostResponse();
-						else if (method == "DELETE")
-							pd.client->sendDeleteResponse();
-
-						if (pd.client->getHeader("Connection") != "keep-alive") {
-							close(pd.fd);
-							conn->removeClient(pd);
-						}
-						else if (pd.client->getHeader("Connection") == "keep-alive") {
-							pd.client->resetForNextRequest();
-							pd._current_time = std::time(0);
-						}
+						conn->modifyEpollEvent(fd, EPOLLOUT); 
 					}
-    	        }
+    	        } else if (!pd.is_listener && (conn->getEpollEvent(i).events & EPOLLOUT)) {
+					std::string method = pd.client->getHeader("Method");
+
+					if (pd.client->isRedirection())
+						pd.client->sendRedirectResponse();
+					else if (pd.client->isCgiScript())
+						pd.client->sendCgiResponse();
+					else if (method == "GET")
+						pd.client->sendGetResponse();
+					else if (method == "POST")
+						pd.client->sendPostResponse();
+					else if (method == "DELETE")
+						pd.client->sendDeleteResponse();
+
+					if (pd.client->getHeader("Connection") != "keep-alive") {
+						close(fd);
+						conn->removeClient(pd);
+					} 
+					else {
+						pd.client->resetForNextRequest();
+						pd._current_time = std::time(0);
+						conn->modifyEpollEvent(fd, EPOLLIN | EPOLLET);
+					}
+				}
     	    }
     	}
 	}
@@ -126,4 +127,5 @@ int	main(int argc, char **argv)
 	
 	return (0);
 }
+
 

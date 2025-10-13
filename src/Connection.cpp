@@ -209,6 +209,15 @@ void        Connection::removeTimeoutClients(time_t now) {
 	}
 }
 
+void    Connection::modifyEpollEvent(int fd, uint32_t events) {
+    struct epoll_event ev;
+    ev.events = events;
+    ev.data.fd = fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == -1) {
+        std::cerr << "epoll_ctl (MOD) failed for fd " << fd << ": " << strerror(errno) << std::endl;
+    }
+}
+
 
 void            Connection::logger(int target_fd, int flag, int time_left) { Logger::logger(this->fd_map[target_fd], flag, time_left); };
 

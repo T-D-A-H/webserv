@@ -50,6 +50,7 @@ class Connection : public Servers
         void                            addServerEpollEvent(int listen_fd);
         void                            populateClientPollData(Servers& servers, PollData &pd, int client_fd);
         void                            addClientEpollEvent(int client_fd);
+
         
         void                            printAddServer(int index,  ServerWrapper& server, int listen_fd);
 
@@ -59,7 +60,7 @@ class Connection : public Servers
         Connection& operator=(const Connection& src);
         ~Connection();
 
-        
+        void                            modifyEpollEvent(int fd, uint32_t events);
         int                             acceptClient(Servers& servers, int fd, PollData &pd);
         void                            removeClient(PollData& pd);
         void                            removeTimeoutClients(time_t now);

@@ -73,7 +73,7 @@ RecvStatus	HttpReceive::receiveRequest() {
 	if (_headers.find("Content-Length") != _headers.end() && _body_complete.empty()) {
 		_body_complete = _request_parse;
 	}
-	if (_headers.find("Content-Type") != _headers.end() && _headers["Content-Type"] == "multipart/form-data") {
+	if (_headers["Content-Type"] == "multipart/form-data") {
 		parseMultipart(_body_complete, _headers["Boundary"]);
 	}
     return (RECV_COMPLETE);
