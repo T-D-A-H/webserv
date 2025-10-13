@@ -297,7 +297,6 @@ bool	HttpReceive::methodDELETE(ServerWrapper &server, size_t best_match) {
 	return (true);
 }
 
-
 void	HttpReceive::parseMultipart(const std::string& body, const std::string& boundary) {
 	
 	std::vector<Part> parts;
