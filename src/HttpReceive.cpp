@@ -207,8 +207,36 @@ bool			HttpReceive::checkRequest() {
 		return (methodPOST(this->_server, getBestMatch()));
 	else if (this->_headers["Method"] == "DELETE")
 		return (methodDELETE(this->_server, getBestMatch()));
+	else if (this->_headers["Method"] == "HEAD")
+		return (methodHEAD(this->_server, getBestMatch()));
 
 	return (sendError(501));
+}
+
+bool	HttpReceive::methodHEAD(ServerWrapper &server, size_t best_match) {
+
+	std::string root = this->_headers["Root"];
+
+	if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
+		return (sendError(405));
+
+	if (isDirectory(this->_full_path.c_str())) {
+		if (server.getAutoIndex(best_match))
+			return (sendAutoResponse(this->_full_path), true);
+		else
+			return (sendError(404));
+	}
+
+	if (this->_full_path.empty() && server.getAutoIndex(best_match))
+		return (sendAutoResponse(root), true);
+
+	else if (this->_full_path.empty() && !server.getAutoIndex(best_match))
+		return (sendError(404));
+
+	if (!fileExistsAndReadable(this->_full_path.c_str(), 1))
+		return (false);
+
+	return (true);
 }
 
 bool	HttpReceive::methodGET(ServerWrapper &server, size_t best_match) {
@@ -401,7 +429,7 @@ bool	HttpReceive::parseChunkedBody(std::string& _body_recv) {
 	return (true);
 }
 
-void HttpReceive::resetForNextRequest() {
+void	HttpReceive::resetForNextRequest() {
 	
     memset(_request, 0, BUFFER_SIZE);  
     _headers.clear();
@@ -448,7 +476,7 @@ bool			HttpReceive::fileExistsAndReadable(const char* path, int mode) {
 bool	HttpReceive::isMethodAllowed(ServerWrapper& server, ssize_t best_match, std::string& method) {
 	
 	if (server.getMethods(best_match).empty())
-		return (true);
+		return (false);
 	for (size_t j = 0; j < server.getMethodsSize(best_match); j++) {
 		
 		if (method == server.getMethod(best_match, j))
@@ -542,6 +570,8 @@ void			HttpReceive::sendDeleteResponse() {HttpSend::sendDeleteResponse(getFd(), 
 void			HttpReceive::sendGetResponse() {HttpSend::sendGetResponse(getFd(), *this); }
 
 void			HttpReceive::sendPostResponse() {HttpSend::sendPostResponse(getFd(), *this); }
+
+void			HttpReceive::sendHeadResponse() {HttpSend::sendHeadResponse(getFd(), *this); }
 
 void			HttpReceive::sendCgiResponse() {HttpSend::sendCgiResponse(getFd(), *this); }
 

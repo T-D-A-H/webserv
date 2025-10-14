@@ -90,7 +90,8 @@ int		main(int argc, char **argv)
 						}
 						conn->modifyEpollEvent(fd, EPOLLOUT); 
 					}
-    	        } else if (!pd.is_listener && (conn->getEpollEvent(i).events & EPOLLOUT)) {
+    	        }
+				else if (!pd.is_listener && (conn->getEpollEvent(i).events & EPOLLOUT)) {
 					std::string method = pd.client->getHeader("Method");
 
 					if (pd.client->isRedirection())
@@ -103,7 +104,8 @@ int		main(int argc, char **argv)
 						pd.client->sendPostResponse();
 					else if (method == "DELETE")
 						pd.client->sendDeleteResponse();
-
+					else if (method == "HEAD")
+						pd.client->sendHeadResponse();
 					if (pd.client->getHeader("Connection") != "keep-alive") {
 						close(fd);
 						conn->removeClient(pd);

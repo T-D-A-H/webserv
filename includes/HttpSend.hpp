@@ -29,6 +29,7 @@ class HttpSend {
 		static void	sendGetResponse(int fd, HttpReceive& _request);
 		static void	sendPostResponse(int fd, HttpReceive& _request);
 		static void	sendDeleteResponse(int fd, HttpReceive& _request);
+		static void	sendHeadResponse(int fd, HttpReceive& _request);
 		static void	sendAutoResponse(int fd, HttpReceive& _request, const std::string &direction_path);
 		static void	sendRedirectResponse(int fd, HttpReceive& _request, size_t best_match);
 		static void	sendCgiResponse(int fd, HttpReceive& _request);

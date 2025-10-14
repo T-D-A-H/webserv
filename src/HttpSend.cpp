@@ -65,6 +65,27 @@ void		HttpSend::sendDeleteResponse(int fd, HttpReceive& _request) {
 	send(fd, response.c_str(), response.size(), 0);
 }
 
+void		HttpSend::sendHeadResponse(int fd, HttpReceive& _request) {
+	
+	std::ifstream file(_request.getFullPath().c_str(), std::ios::binary | std::ios::ate);
+	std::streamsize file_size = file.tellg();
+	file.close();
+
+    std::ostringstream oss;
+    oss << "HTTP/1.1 200 OK\r\n";
+    oss << "Content-Type: " << getContentType(_request.getFullPath()) << "\r\n";
+    oss << "Content-Length: " << file_size << "\r\n";
+
+	std::string connection_header = _request.getHeader("Connection");
+    if (connection_header == "keep-alive")
+		oss << "Connection: keep-alive\r\n\r\n";
+    else
+		oss << "Connection: close\r\n\r\n";
+
+	std::string response = oss.str();
+	send(fd, response.c_str(), response.size(), 0);
+}
+
 void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_match) {
 
 	std::string			response;

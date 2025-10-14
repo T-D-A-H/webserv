@@ -112,7 +112,7 @@ bool	isUnsupportedMethod(std::map<std::string, std::string> &headers) {
 	if (it == headers.end())
 		return (false);
 	std::string method = it->second;
-	if (method != "GET" && method != "POST" && method != "DELETE" && method != "PUT")
+	if (method != "GET" && method != "POST" && method != "DELETE" && method != "HEAD")
 		return (true);
 	return (false);
 }

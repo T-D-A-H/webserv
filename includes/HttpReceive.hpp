@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/13 16:39:47 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/14 13:02:04 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,6 +104,7 @@ class HttpReceive {
 		bool								methodGET(ServerWrapper &server, size_t best_match);
 		bool								methodDELETE(ServerWrapper &server, size_t best_match);
 		bool								methodPOST(ServerWrapper &server, size_t best_match);
+		bool								methodHEAD(ServerWrapper &server, size_t best_match);
 		bool								checkRequest();
 		ssize_t								getBestMatch();
 		ssize_t								findBestMatch(ServerWrapper& server, std::string req_path);
@@ -120,6 +121,7 @@ class HttpReceive {
 		void								sendGetResponse();
 		void								sendPostResponse();
 		void								sendDeleteResponse();
+		void								sendHeadResponse();
 		void								sendAutoResponse(const std::string &direction_path);
 		void								sendCgiResponse();
 		void								sendRedirectResponse();

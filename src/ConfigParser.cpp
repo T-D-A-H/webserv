@@ -432,7 +432,7 @@ void    ConfigParser::methodsToken(ParserVariables& vars) {
             vars.token.erase(vars.token.size() - 1);
             found = true;
         }
-        if (vars.token != "POST" && vars.token != "GET" && vars.token != "DELETE")
+        if (vars.token != "POST" && vars.token != "GET" && vars.token != "DELETE" && vars.token != "HEAD")
             throw (UnknownVariableValueException(temp_var, "location " + vars.cur_loc.path));
         if (isMisconfiguredLocation(vars) == true)
             throw (MissingClosingSemicolonException(temp_var, "location " + vars.cur_loc.path));  
