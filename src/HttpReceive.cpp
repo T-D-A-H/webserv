@@ -13,9 +13,9 @@
 #include "../includes/HttpReceive.hpp"
 #include "../includes/Logger.hpp"
 
-HttpReceive::HttpReceive(ServerWrapper& _server) : _server(_server) {
+HttpReceive::HttpReceive(ServerWrapper& _server, std::map<std::string, Session>& _session) : _server(_server) {
 	
-	this->_fd = this->_server.getFD();
+	this->session = _session;
 	this->_is_cgi_script = false;
 	this->_is_redirect = false;
 	this->body_state = B_INCOMPLETE;
@@ -193,7 +193,7 @@ bool			HttpReceive::checkRequest() {
 		return (sendError(400));
 	if (isMissingContentLengthForPost(this->_headers))
 		return (sendError(411));
-	if (isContentLengthTooLarge(this->_headers, this->_server.getMaxClientSize()))
+	if (isContentLengthTooLarge(this->_headers, this->_server.getClientMaxBodySize()))
 		return (sendError(413));
 	if (isMissingContentTypeForPost(this->_headers))
 		return (sendError(415));
@@ -542,6 +542,8 @@ ssize_t			HttpReceive::getBestMatch() {return (_best_match);}
 int				HttpReceive::getFd() {return (this->_fd);}
 
 char*			HttpReceive::getRequest() {return (this->_request);}
+
+// std::map<std::string, Session>&		HttpReceive::getSession() {return (this->session);}
 
 std::string		HttpReceive::getHeader(std::string index) {return (this->_headers[index]);}
 

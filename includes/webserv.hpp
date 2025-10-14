@@ -35,6 +35,7 @@
 #include <vector>
 #include <utility>
 #include <climits>
+#include <ctime>
 
 
 std::map<std::string, std::string>	parseUrlEncoded(const std::string& body);

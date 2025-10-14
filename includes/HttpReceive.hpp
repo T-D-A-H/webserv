@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/14 13:02:04 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/14 22:27:21 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@
 #include "./HttpSend.hpp"
 #include "./ServerWrapper.hpp"
 #include "./ConfigParser.hpp"
+#include "./Cookies.hpp"
 #include <iostream>
 #include <map>
 #include <iosfwd>
@@ -52,10 +53,12 @@ enum BodyStatus {B_INCOMPLETE, B_COMPLETE};
 
 enum BodyTransferType {UNSET, SET, PLAIN, CHUNKED, MULTIPART};
 
+struct Session;
 
 class HttpReceive {
-	
+			
 	private:
+	
 		int									_fd;
 		char								_request[BUFFER_SIZE];
 		std::map<std::string, std::string>	_headers;
@@ -64,60 +67,35 @@ class HttpReceive {
 		std::string							_full_path;
 		ServerWrapper&						_server;
 		ssize_t								_best_match;
-		
-		
 		std::string							_request_parse;
 		std::string							_body_complete;
 		HeaderStatus						header_state;
 		BodyStatus							body_state;
 		BodyTransferType					body_type;
 		unsigned long						_total_bytes;
-		
-	
 		bool								_is_cgi_script;
 		bool								_is_redirect;
-
+		std::map<std::string, Session>      session;
 		typedef void						(HttpReceive::*Handler)();
 		
+		
 	public:
-		HttpReceive(ServerWrapper& _server);
+		HttpReceive(ServerWrapper& _server, std::map<std::string, Session>& _session);
 		~HttpReceive();
-	
 		bool								prepareRequest();
 		RecvStatus							receiveRequest();
-		bool								parseHeader(std::string header_complete);
-		
 		void 								resetForNextRequest();
-		void								setBestMatch(ssize_t _best_match);	
+		bool								checkRequest();
 		void								setFd(int _fd);
-		void								setHeader(std::string index, std::string path);
-		void								setFullPath(const std::string& full_path);
-		std::string							getFullPath();
 		int									getFd();
+		std::string							getFullPath();
 		char*								getRequest();
 		std::string							getHeader(std::string index);
 		std::ifstream&						getFile();
 		ServerWrapper&						getServer();
+		// std::map<std::string, Session>&		getSession();
 		size_t								getPostBodySize();
 		std::string							getPostBody();
-		
-		bool								methodGET(ServerWrapper &server, size_t best_match);
-		bool								methodDELETE(ServerWrapper &server, size_t best_match);
-		bool								methodPOST(ServerWrapper &server, size_t best_match);
-		bool								methodHEAD(ServerWrapper &server, size_t best_match);
-		bool								checkRequest();
-		ssize_t								getBestMatch();
-		ssize_t								findBestMatch(ServerWrapper& server, std::string req_path);
-		bool								isRedirection();
-		bool								isCgiScript();
-		bool								isMethodAllowed(ServerWrapper& server, ssize_t best_match, std::string& method);		
-		bool								fileExistsAndReadable(const char* path, int mode);
-		void								parseMultipart(const std::string& body, const std::string& boundary);
-		bool								parseChunkedBody(std::string& _body_recv);
-
-		void								logger(std::map<std::string, std::string> _headers, int flag);
-
-
 		void								sendGetResponse();
 		void								sendPostResponse();
 		void								sendDeleteResponse();
@@ -146,6 +124,34 @@ class HttpReceive {
 		void								send503Response();
 		void								send504Response();
 		void								send505Response();
+		bool								isRedirection();
+		bool								isCgiScript();
+	
+	private:
+		bool								parseHeader(std::string header_complete);
+		void								setBestMatch(ssize_t _best_match);	
+		bool								methodGET(ServerWrapper &server, size_t best_match);
+		bool								methodDELETE(ServerWrapper &server, size_t best_match);
+		bool								methodPOST(ServerWrapper &server, size_t best_match);
+		bool								methodHEAD(ServerWrapper &server, size_t best_match);
+		ssize_t								getBestMatch();
+		ssize_t								findBestMatch(ServerWrapper& server, std::string req_path);
+		bool								isMethodAllowed(ServerWrapper& server, ssize_t best_match, std::string& method);		
+		bool								fileExistsAndReadable(const char* path, int mode);
+		void								parseMultipart(const std::string& body, const std::string& boundary);
+		bool								parseChunkedBody(std::string& _body_recv);
+		void								logger(std::map<std::string, std::string> _headers, int flag);
+		void								setHeader(std::string index, std::string path);
+		void								setFullPath(const std::string& full_path);
+
+		void								addSession(); 
+        bool								hasSession();
+        double								getSessionDuration(); 
+        std::string							parseSessionId();
+        std::string							generateSessionId();
+        std::string							ensureSession();
+		
+
 		
 };
 

@@ -6,37 +6,12 @@
 #include "./ConfigParser.hpp"
 #include <ctime>
 
-struct Endpoint
-{
-    std::string ip;
-    uint16_t    port;
-
-    Endpoint() {}
-    Endpoint(const std::string &i, uint16_t p) : ip(i), port(p) {}
-};
-
-struct Session
-{
-	std::string session_id;
-    int         _current_time;
-};
-
 class ServerWrapper
 {
     private:
-
         const ServerConfig*                 config;
-        int	                                _fd;                        // Descriptor de socket, se inicializa internamente
-		std::vector<std::string>            _server_name;              // server_name localhost;
-		uint16_t                            _port;                     // listen 9999;
-		in_addr_t                           _host;                     // host 127.0.0.1;
-		sa_family_t                         _sin_family;               // Tipo de socket, normalmente AF_INET
-		unsigned long		                _client_max_body_size;     // client_max_body_size 5;
-		struct sockaddr_in	                _server_adress;            // Se construye con host, puerto y familia
-		std::vector<LocationConfig>         _locations;
-        std::vector<Endpoint>               endpoints;
-        std::vector<int>                    sockets;
-        std::map<std::string, Session>      _session;
+        std::vector<LocationConfig>         _locations;
+
 
     public:
 
@@ -46,29 +21,9 @@ class ServerWrapper
         ServerWrapper& operator=(const ServerWrapper& src);
         ~ServerWrapper();
 
- void addSession(const std::string& session_id) {
-            Session s;
-            s.session_id = session_id;
-            s._current_time = std::time(0);
-            _session[session_id] = s;
-        }
-
-        bool hasSession(const std::string& id) {
-            return _session.find(id) != _session.end();
-        }
-
-        double getSessionDuration(const std::string& session_id) {
-            std::map<std::string, Session>::iterator it = _session.find(session_id);
-            if (it == _session.end())
-                return -1.0;
-
-            time_t now = std::time(NULL);
-            double seconds = difftime(now, it->second._current_time);
-            return seconds;
-        }
-
         std::string                         getIps(size_t ip_index) const;
         size_t                              getIpCount() const;
+        size_t                              getCountIpPorts();
         uint16_t                            getPorts(size_t port_index) const;
         size_t                              getPortCount() const;
         std::string                         getServerName(size_t server_name_index) const;
@@ -100,37 +55,6 @@ class ServerWrapper
         std::string                         getCgiExtensions(size_t loc_index, size_t cgi_extension_index) const;
         size_t                              getCgiExtensionCount(size_t loc_index) const;
         std::string                         getUploadStore(size_t loc_index) const;
-        uint16_t                            getCountIpPorts();
-        
-
-        void                                setSocket(int _fd);
-		void                                setServerName(const std::vector<std::string>& _server_name);
-		void                                setPort(uint16_t _port);
-		void                                setHost(in_addr_t _host);
-		void                                setSinFamily(sa_family_t  _sin_family);
-		void                                setMaxClientSize(unsigned long _client_max_body_size);
-		void                                setLocations(const std::vector<LocationConfig>& _locations);
-        void                                addEndpoint(const std::string &ip, uint16_t port);
-        void                                addSocket(int sock);
-        void	                            setupSockAddr();
-		void	                            bindAndListen();
-		void	                            setupSocket();
-		void	                            setupServerConfig(const std::vector<std::string>& _server_name, uint16_t _port, in_addr_t _host, sa_family_t _sin_family, unsigned long _client_max_body_size);
-
-        
-        size_t                              getSocketsSize() const;
-        const std::vector<int>&             getSockets() const;
-        int                                 getSocket(std::size_t index) const;
-		int                                 getTheSocket() const;
-		const std::vector<std::string>&     getServerName() const;
-		uint16_t			                getPort() const;
-		in_addr_t			                getHost() const;
-		sa_family_t			                getSinFamily() const;
-		unsigned long		                getMaxClientSize() const;
-		struct sockaddr_in*	                getSockAddr();
-        int                                 getFD() const;
-        const std::vector<Endpoint>&        getEndpoints() const;
-
 };
 
 #endif

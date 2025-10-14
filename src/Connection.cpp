@@ -1,64 +1,39 @@
 #include "../includes/Connection.hpp"
 #include "../includes/Logger.hpp"
 
-Connection::Connection(Servers& servers) : events(MAX_EVENTS)  {
+Connection::Connection(Servers& servers) : events(MAX_EVENTS) {
 
-    SetupAllServers(servers);
-    createEpollInstance();
-    populateSockets(servers);
+
+    this->epoll_fd =  epoll_create(1);
+    if (this->epoll_fd == -1)
+        throw (EpollInstanceException());
+
+    for (size_t i = 0; i < servers.size(); i++) {
+
+        ServerSocket s_socket;
+		for (size_t j = 0; j < servers[i].getCountIpPorts(); j++) {
+
+			s_socket._host = inet_addr(servers[i].getIps(j).c_str());
+			s_socket._port = htons(servers[i].getPorts(j));
+            s_socket._client_max_body_size = servers[i].getClientMaxBodySize();
+            s_socket._server_name = servers[i].getServerNamesList();
+            s_socket._sin_family = AF_INET;
+            setupSocket(s_socket);
+			bindAndListen(s_socket);
+            setNonBlocking(s_socket._fd);
+            addServerEpollEvent(s_socket._fd);
+            populateServerPollData(i, s_socket._fd, servers[i].getIps(j), servers[i].getPorts(j));
+		}
+        this->server_sockets.push_back(s_socket);
+    }
 }
 
 Connection::Connection(const Connection& src) {*this = src;}
 
 Connection& Connection::operator=(const Connection& src) {(void)src;return (*this);};
 
-Connection::~Connection() {if (epoll_fd >= 0) close(epoll_fd);}
+Connection::~Connection() {if (this->epoll_fd >= 0) close(this->epoll_fd);}
 
-
-void            Connection::SetupAllServers(Servers& servers) {
-
-	for (size_t i = 0; i < servers.size(); i++) {
-
-		for (int j = 0; j < servers[i].getCountIpPorts(); j++) {
-
-			std::string ip = servers[i].getIps(j).c_str();
-			uint16_t port = servers[i].getPorts(j);
-			servers[i].setHost(inet_addr(ip.c_str()));
-			servers[i].setPort(port);
-			servers[i].setMaxClientSize(servers[i].getClientMaxBodySize());
-			servers[i].setupSocket();
-			servers[i].setServerName(servers[i].getServerNamesList());
-       		servers[i].setupServerConfig(servers[i].getServerName(), htons(servers[i].getPort()),
-                      servers[i].getHost(), AF_INET, servers[i].getMaxClientSize());
-			servers[i].bindAndListen();
-			servers[i].addSocket(servers[i].getTheSocket());
-		}
-    }
-}
-
-void              Connection::createEpollInstance() {
-
-    setEpollFd(epoll_create(1));
-    if (this->epoll_fd == -1) {
-
-        perror("epoll_create1");
-        throw (EpollInstanceException());
-    }
-}
-
-void              Connection::populateSockets(Servers& servers) {
-
-    for (size_t i = 0; i < servers.size(); i++) {
-
-        for (size_t j = 0; j < servers[i].getSocketsSize(); j++) {
-
-            int listen_fd = servers[i].getSocket(j);
-            setNonBlocking(listen_fd);
-            addServerEpollEvent(listen_fd);
-            populateServerPollData(i, listen_fd, servers[i], j);
-        }
-    }
-}
 
 void                Connection::addServerEpollEvent(int listen_fd) {
 
@@ -72,14 +47,14 @@ void                Connection::addServerEpollEvent(int listen_fd) {
     }
 }
 
-void                Connection::populateServerPollData(int server_index, int listen_fd, ServerWrapper& server, int j) {
+void                Connection::populateServerPollData(int server_index, int listen_fd, std::string ip, uint16_t port) {
 
     PollData pd;
     std::ostringstream  oss;
 
-    oss << server.getPorts(j);
+    oss << port;
     pd.fd = listen_fd;
-    pd.ip_port = "[" + server.getIps(j) + ":" + oss.str() + "] - ";
+    pd.ip_port = "[" + ip + ":" + oss.str() + "] - ";
     pd.server_index = server_index;
     pd.is_listener = true;
     pd.client = NULL;
@@ -91,7 +66,7 @@ void                Connection::populateServerPollData(int server_index, int lis
     logger(listen_fd, SERVER_CONNECT, 0);
 }
 
-int            Connection::acceptClient(Servers& servers, int fd, PollData &pd) {
+int                 Connection::acceptClient(Servers& servers, int fd, PollData &pd) {
 
     sockaddr_in     client_addr;
     socklen_t       client_len = sizeof(client_addr);
@@ -126,7 +101,7 @@ void                Connection::populateClientPollData(Servers& servers, PollDat
     client_pd.ip_port = pd.ip_port;
     client_pd.server_index = pd.server_index;
     client_pd.is_listener = false;
-    client_pd.client = new HttpReceive(servers[pd.server_index]);
+    client_pd.client = new HttpReceive(servers[pd.server_index], server_sockets[pd.server_index]._session);
     client_pd._start_time = std::time(0);
     client_pd._current_time = client_pd._start_time;
     client_pd.client_time_out = false;
@@ -161,7 +136,6 @@ int                 Connection::setNonBlocking(int fd) {
     return (0);
 }
 
-
 void            Connection::removeClient(PollData& pd) {
 
     if (pd.client == NULL)
@@ -179,7 +153,6 @@ void            Connection::removeClient(PollData& pd) {
     pd.client_allocated = false;
     this->fd_map.erase(client_fd);
 }
-
 
 void        Connection::removeTimeoutClients(time_t now) {
 
@@ -211,6 +184,7 @@ void        Connection::removeTimeoutClients(time_t now) {
 }
 
 void    Connection::modifyEpollEvent(int fd, uint32_t events) {
+
     struct epoll_event ev;
     ev.events = events;
     ev.data.fd = fd;
@@ -220,21 +194,48 @@ void    Connection::modifyEpollEvent(int fd, uint32_t events) {
 }
 
 
-void            Connection::logger(int target_fd, int flag, int time_left) { Logger::logger(this->fd_map[target_fd], flag, time_left); };
+void    Connection::setupSocket(ServerSocket& s_socket) {
 
-void                Connection::setEpollFd(int fd) {this->epoll_fd = fd;}
+    s_socket._fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (s_socket._fd == -1) {
+
+		throw (std::runtime_error("Failed to create socket."));
+	}
+	int opt = 1;
+	if (setsockopt(s_socket._fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+
+		close(s_socket._fd);
+		throw (std::runtime_error("setsockopt(SO_REUSEADDR) failed."));
+	}
+}
+
+void    Connection::bindAndListen(ServerSocket& s_socket) {
+
+	s_socket._server_adress.sin_addr.s_addr = s_socket._host;
+	s_socket._server_adress.sin_family = s_socket._sin_family;
+	s_socket._server_adress.sin_port = s_socket._port;
+
+	if (bind(s_socket._fd, (struct sockaddr*)&s_socket._server_adress, sizeof(struct sockaddr_in)) < 0) {
+        close(s_socket._fd);
+        std::ostringstream oss;
+        oss << ntohs(s_socket._server_adress.sin_port);
+        throw (std::runtime_error("Failed to bind to port " + oss.str()));
+	}
+	if (listen(s_socket._fd, s_socket._client_max_body_size) < 0) {
+
+        close(s_socket._fd);
+        throw (std::runtime_error("Failed to listen on socket."));
+	}
+
+}
+
+void                Connection::logger(int target_fd, int flag, int time_left) { Logger::logger(this->fd_map[target_fd], flag, time_left); };
 
 int                 Connection::getEpollFd() const {return (this->epoll_fd);}
 
 epoll_event*        Connection::getEpollEvents() {return (&this->events[0]);}
 
-epoll_event&        Connection::getEpollEvent(int index) {
-
-    if (index < 0 || index >= MAX_EVENTS) {
-        throw std::out_of_range("Invalid epoll_event index");
-    }
-    return (this->events[index]);
-}
+epoll_event&        Connection::getEpollEvent(int index) {if (index < 0 || index >= MAX_EVENTS) {throw std::out_of_range("Invalid epoll_event index");}return (this->events[index]);}
 
 std::map<int, PollData>&     Connection::getFdMap() {return (this->fd_map);}
 

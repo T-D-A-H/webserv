@@ -49,7 +49,7 @@ int		main(int argc, char **argv)
 		signal(SIGINT, handle_sigint);
 		while (true) {
 
-			int ready_fds = epoll_wait(conn->getEpollFd(), conn->getEpollEvents(), MAX_EVENTS, 1000);
+			int ready_fds = epoll_wait(conn->getEpollFd(), conn->getEpollEvents(), MAX_EVENTS, EPOLL_TIME_OUT);
 			if (ready_fds == -1) {
 				break ;
 			}

@@ -20,8 +20,10 @@
 #include <fstream>
 #include <iomanip>
 
+// #include "./Cookies.hpp"
+
 class HttpReceive;
-struct Session;
+
 
 class HttpSend {
 	
@@ -57,10 +59,12 @@ class HttpSend {
 		static void send504(int fd, HttpReceive& _request) { sendErr(fd, _request, 504); }
 		static void send505(int fd, HttpReceive& _request) { sendErr(fd, _request, 505); }
 
-		static std::string		getStatusMsg(int error_code);
+
 };
 
+std::string		getStatusMsg(int error_code);
 std::string		getContentType(const std::string& path);
+std::string		getCookie(HttpReceive& _request);
 
 #endif
 
