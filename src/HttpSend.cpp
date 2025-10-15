@@ -138,10 +138,13 @@ void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_
     	oss << "Location: " << url_or_loc << "\r\n";
     	oss << "Content-Length: " << 0 << "\r\n";
 		if (_request.hasClientCookie()) {
-		bool is_new_session = false;
-		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
-		if (is_new_session)
-			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+			bool is_new_session = false;
+			std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
+			if (is_new_session)
+				oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+			std::string color = _request.getHeader("X-Color");
+			if (!color.empty())
+				oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
 		}
     	if (_request.getHeader("Connection") == "keep-alive")
 			oss << "Connection: keep-alive\r\n\r\n";
@@ -253,7 +256,7 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 		}
 		
 		if (access(script_file_path.c_str(), R_OK) != 0) {
-			//CHECK IF NEED TO CLOSE FDS
+			close(pipe_parent[0]); close(pipe_parent[1]); close(pipe_child[0]); close(pipe_child[1]);
 			std::cerr << "File not executable: " << strerror(errno) << std::endl;
 			send403(fd, _request); exit(1);
 		}
@@ -276,6 +279,7 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 		char *argv[] = { (char*)script_file_path.c_str(), NULL };
 		
 		if (execve(script_file_path.c_str(), argv, envp.data()) == -1) {
+			close(pipe_parent[0]); close(pipe_parent[1]); close(pipe_child[0]); close(pipe_child[1]);
 			std::cerr << "Child execve() failed: " << strerror(errno) << std::endl;
 			send500(fd, _request);exit(1);
 		}
@@ -300,10 +304,14 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 		std::ostringstream oss;
 		oss << "HTTP/1.1 200 OK\r\n";
 		if (_request.hasClientCookie()) {
-		bool is_new_session = false;
-		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
-		if (is_new_session)
-			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+
+			bool is_new_session = false;
+			std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
+			if (is_new_session)
+				oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+			std::string color = _request.getHeader("X-Color");
+			if (!color.empty())
+				oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
 		}
     	if (_request.getHeader("Connection") == "keep-alive")
 			oss << "Connection: keep-alive\r\n\r\n";
@@ -340,25 +348,29 @@ void        HttpSend::sendErr(int fd, HttpReceive& _request, int error_code) {
     }
     if (error ==  1) {
 
-            buf << "<!DOCTYPE html><html><head><title>" << getStatusMsg(error_code) << "</title></head>"
-            << "<body><h1>" << getStatusMsg(error_code) << "</h1></body></html>";	
-            body = buf.str();
+        buf << "<!DOCTYPE html><html><head><title>" << getStatusMsg(error_code) << "</title></head>"
+        << "<body><h1>" << getStatusMsg(error_code) << "</h1></body></html>";	
+        body = buf.str();
     }
 
     std::ostringstream oss;
     oss << "HTTP/1.1 " << error_code << getStatusMsg(error_code) << "\r\n"
     	<< "Content-Type: text/html\r\n"
     	<< "Content-Length: " << body.size() << "\r\n";
-		if (_request.hasClientCookie()) {
+	if (_request.hasClientCookie()) {
 		bool is_new_session = false;
 		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
 		if (is_new_session)
 			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+		std::string color = _request.getHeader("X-Color");
+		if (!color.empty()) {
+			oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
 		}
-    	if (_request.getHeader("Connection") == "keep-alive")
-			oss << "Connection: keep-alive\r\n\r\n";
-    	else
-			oss << "Connection: close\r\n\r\n";
+	}
+	if (_request.getHeader("Connection") == "keep-alive")
+		oss << "Connection: keep-alive\r\n\r\n";
+	else
+		oss << "Connection: close\r\n\r\n";
     oss << body;
 
     response = oss.str();
