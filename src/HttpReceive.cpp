@@ -30,7 +30,7 @@ HttpReceive::~HttpReceive() {}
 
 RecvStatus	HttpReceive::receiveRequest() {
 
-    char	buffer[1];
+    char	buffer[100];
     int		bytes_received;
 	
     while (true) {
@@ -51,7 +51,8 @@ RecvStatus	HttpReceive::receiveRequest() {
 				if (_headers.find("Transfer-Encoding") != _headers.end() && _headers["Transfer-Encoding"] == "chunked")
 					body_type = CHUNKED;
 			}
-
+			if (header_state == H_COMPLETE && _headers.find("Content-Length") != _headers.end() && checkContentLength(_headers["Content-Length"].c_str(), _server.getClientMaxBodySize()) > 0)
+				return (RECV_PAYLOAD_TOO_LARGE_ERROR);
 			if (header_state == H_COMPLETE && body_state == B_INCOMPLETE && body_type == CHUNKED) {
 				
 				if (!parseChunkedBody(_request_parse))

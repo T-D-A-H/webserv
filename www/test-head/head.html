@@ -49,5 +49,19 @@
 		</div>
 		<pre id="output" style="text-align: left; background: #f8f8f8; border-radius: 10px; padding: 15px; margin-top: 20px; white-space: pre-wrap; word-break: break-word;"></pre>
 	</main>
+	<script>
+        // Función para leer cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Aplicar cookie "color" al fondo
+        const color = getCookie("color");
+        if (color) {
+            document.body.style.backgroundColor = color;
+        }
+    </script>
 </body>
 </html>

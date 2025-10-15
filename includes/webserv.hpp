@@ -45,7 +45,6 @@ struct Session
 };
 
 
-std::map<std::string, std::string>	parseUrlEncoded(const std::string& body);
 void		                        removeSpaces(std::string& str1, std::string& str2);
 bool			                    isDirectory(const char* path);
 bool			                    isValidHttpVersion(const std::string& version);

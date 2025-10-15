@@ -36,5 +36,19 @@
             <button onclick="window.location.href='../errors/505.html'">505</button>
         </div>
     </main>
+        <script>
+        // Función para leer cookie
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Aplicar cookie "color" al fondo
+        const color = getCookie("color");
+        if (color) {
+            document.body.style.backgroundColor = color;
+        }
+    </script>
 </body>
 </html>

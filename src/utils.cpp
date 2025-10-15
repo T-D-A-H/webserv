@@ -1,34 +1,6 @@
 #include "../includes/HttpReceive.hpp"
 #include "../includes/webserv.hpp"
 
-std::map<std::string, std::string>	parseUrlEncoded(const std::string& body) {
-
-	std::map<std::string, std::string> url_data_pairs;
-	std::string key;
-	std::string value;
-	size_t i  = 0;
-	
-	for (; i < body.size(); i++) {
-
-		if (body[i] != '=')
-			key += body[i];
-		if (body[i] == '=') {
-			i++;
-			for (; i < body.size(); i++) {
-				
-				if (body[i] != '&')
-					value += body[i];
-				if (body[i] == '&') {
-					break ;
-				}
-			}
-			url_data_pairs[key] = value;
-			key = "";
-			value = "";
-		}
-	}
-	return (url_data_pairs);
-}
 
 void		removeSpaces(std::string& str1, std::string& str2) {
 

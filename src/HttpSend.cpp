@@ -17,6 +17,10 @@ void		HttpSend::sendGetResponse(int fd, HttpReceive& _request) {
 		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
 		if (is_new_session)
 			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+		std::string color = _request.getHeader("X-Color");
+		if (!color.empty()) {
+			oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
+		}
 	}
     if (_request.getHeader("Connection") == "keep-alive")
 		oss << "Connection: keep-alive\r\n\r\n";
@@ -43,6 +47,10 @@ void		HttpSend::sendPostResponse(int fd, HttpReceive& _request) {
 		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
 		if (is_new_session)
 			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+		std::string color = _request.getHeader("X-Color");
+		if (!color.empty()) {
+			oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
+		}
 	}
     if (_request.getHeader("Connection") == "keep-alive")
 		oss << "Connection: keep-alive\r\n\r\n";
@@ -67,6 +75,10 @@ void		HttpSend::sendDeleteResponse(int fd, HttpReceive& _request) {
 		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
 		if (is_new_session)
 			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+		std::string color = _request.getHeader("X-Color");
+		if (!color.empty()) {
+			oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
+		}
 	}
     if (_request.getHeader("Connection") == "keep-alive")
 		oss << "Connection: keep-alive\r\n\r\n";
@@ -94,6 +106,10 @@ void		HttpSend::sendHeadResponse(int fd, HttpReceive& _request) {
 		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
 		if (is_new_session)
 			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+		std::string color = _request.getHeader("X-Color");
+		if (!color.empty()) {
+			oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
+		}
 	}
     if (_request.getHeader("Connection") == "keep-alive")
 		oss << "Connection: keep-alive\r\n\r\n";
@@ -180,6 +196,10 @@ void		HttpSend::sendAutoResponse(int fd, HttpReceive& _request, const std::strin
 		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);
 		if (is_new_session)
 			oss << "Set-Cookie: session_id=" << session_id << "; Path=/; HttpOnly\r\n";
+		std::string color = _request.getHeader("X-Color");
+		if (!color.empty()) {
+			oss << "Set-Cookie: color=" << color << "; Path=/;\r\n";
+		}
 	}
     if (_request.getHeader("Connection") == "keep-alive")
 		oss << "Connection: keep-alive\r\n\r\n";
@@ -328,8 +348,7 @@ void        HttpSend::sendErr(int fd, HttpReceive& _request, int error_code) {
     std::ostringstream oss;
     oss << "HTTP/1.1 " << error_code << getStatusMsg(error_code) << "\r\n"
     	<< "Content-Type: text/html\r\n"
-    	<< "Content-Length: " << body.size() << "\r\n"
-    	<< "Connection: close\r\n\r\n";
+    	<< "Content-Length: " << body.size() << "\r\n";
 		if (_request.hasClientCookie()) {
 		bool is_new_session = false;
 		std::string session_id = ensureSession(_request.getSession(), _request.getHeader("Cookie"), is_new_session);

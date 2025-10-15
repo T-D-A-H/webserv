@@ -70,8 +70,10 @@ int		main(int argc, char **argv)
 					RecvStatus status = pd.client->receiveRequest();
 
 					if (status == RECV_PAYLOAD_TOO_LARGE_ERROR || status == RECV_ERROR || status == RECV_CLOSED) {
-						if (status == RECV_PAYLOAD_TOO_LARGE_ERROR)
+						if (status == RECV_PAYLOAD_TOO_LARGE_ERROR) {
+							conn->removeClient(pd);
 							pd.client->sendError(413);
+						}
 						continue ;
 					}
 					else if (status == RECV_INCOMPLETE) {
