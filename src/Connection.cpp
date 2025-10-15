@@ -33,7 +33,6 @@ Connection& Connection::operator=(const Connection& src) {(void)src;return (*thi
 
 Connection::~Connection() {if (this->epoll_fd >= 0) close(this->epoll_fd);}
 
-
 void                Connection::addServerEpollEvent(int listen_fd) {
 
     struct epoll_event ev;
