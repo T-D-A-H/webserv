@@ -235,8 +235,8 @@ void     ConfigParser::clientMaxBodySizeToken(ParserVariables& vars) {
         throw (MissingClosingSemicolonException(temp_var, "server")); 
     size_t len = vars.token.size();
     char c = vars.token[len - 1];
-    unsigned long multiplier = 1;
     std::string number_part = vars.token;
+    uint64_t multiplier = 1ULL;
 
     if ((c == 'K' || c == 'k') && isdigit(vars.token[len - 2])) {
         multiplier = 1024ULL;
@@ -600,13 +600,19 @@ std::vector<std::string> ConfigParser::cp_split(const std::string& str, char del
 }
 
 
-unsigned long      ConfigParser::str_to_unsigned_long(const std::string& s) {
+uint64_t    ConfigParser::str_to_unsigned_long(const std::string &s) {
 
-    std::stringstream iss(s);
-    unsigned long result;
+    char *endptr = NULL;
+    errno = 0;
 
-    iss >> result;
-    return (result);
+    uint64_t val = strtoull(s.c_str(), &endptr, 10);
+
+    if (errno == ERANGE)
+        throw std::out_of_range("value too large");
+    if (*endptr != '\0')
+        throw std::invalid_argument("non-numeric characters in input");
+
+    return (val);
 }
 
 bool ConfigParser::isMisconfiguredLocation(ParserVariables& vars) {

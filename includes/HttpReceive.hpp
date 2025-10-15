@@ -6,7 +6,7 @@
 /*   By: ctommasi <ctommasi@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 13:13:42 by jaimesan          #+#    #+#             */
-/*   Updated: 2025/10/15 13:21:00 by ctommasi         ###   ########.fr       */
+/*   Updated: 2025/10/15 19:21:03 by ctommasi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,7 +70,7 @@ class HttpReceive {
 		HeaderStatus						header_state;
 		BodyStatus							body_state;
 		BodyTransferType					body_type;
-		unsigned long						_total_bytes;
+		uint64_t							_total_bytes;
 		bool								_is_cgi_script;
 		bool								_is_redirect;
 		bool								user_accepts_cookies;

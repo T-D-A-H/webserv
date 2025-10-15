@@ -6,7 +6,6 @@ Connection::Connection(Servers& servers) : events(MAX_EVENTS) {
     this->epoll_fd =  epoll_create(1);
     if (this->epoll_fd == -1)
         throw (EpollInstanceException());
-
     for (size_t i = 0; i < servers.size(); i++) {
 
         ServerSocket s_socket;

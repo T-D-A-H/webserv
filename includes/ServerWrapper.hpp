@@ -32,7 +32,7 @@ class ServerWrapper
         std::string                         getErrorFile(int error_page_index) const;
         std::string                         getErrorRoot(int error_page_index) const;
         size_t                              getErrorPageCount() const;
-        unsigned long                       getClientMaxBodySize() const;
+        uint64_t                            getClientMaxBodySize() const;
         const std::vector<std::string>&     getDefaultIndices() const;
         std::string                         getDefaultIndexFile(size_t index_file) const;
         size_t                              getDefaultIndexCount() const;

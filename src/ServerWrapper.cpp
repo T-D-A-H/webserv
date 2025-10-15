@@ -94,7 +94,7 @@ size_t                  ServerWrapper::getErrorPageCount() const {
 }
 
 
-unsigned long                  ServerWrapper::getClientMaxBodySize() const {
+uint64_t                  ServerWrapper::getClientMaxBodySize() const {
 
     if (!config) return (0);
     return (config->client_max_body_size);

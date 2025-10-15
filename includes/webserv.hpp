@@ -49,7 +49,7 @@ void		                        removeSpaces(std::string& str1, std::string& str2)
 bool			                    isDirectory(const char* path);
 bool			                    isValidHttpVersion(const std::string& version);
 bool                                isNumber(const std::string &s);
-int                                 checkContentLength(const char *num_str, unsigned long max_size);
+int                                 checkContentLength(const char *num_str, uint64_t max_size);
 bool                                isValidHeaderName(std::string header_name);
 bool                                isValidHeaderValue(std::string header_value);
 bool                                isMissingRequiredHeaders(std::map<std::string, std::string> &headers);

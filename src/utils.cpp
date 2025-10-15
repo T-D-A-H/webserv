@@ -24,17 +24,19 @@ bool	isNumber(const std::string &s) {
     return (true);
 }
 
-int checkContentLength(const char *num_str, unsigned long max_size) {
+int checkContentLength(const char *num_str, uint64_t max_size) {
 
     char *endptr = NULL;
     errno = 0;
 
-    unsigned long val = strtoul(num_str, &endptr, 10);
+    uint64_t val = strtoul(num_str, &endptr, 10);
 
-    if ((errno == ERANGE) || val > ULONG_MAX)
-		return (-1);
+    if (errno == ERANGE)
+        return (-1);
+    if (*endptr != '\0')
+        return (-1);
     if (val > max_size)
-		return (-1);
+        return (-1);
     return (0);
 }
 

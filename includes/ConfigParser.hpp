@@ -25,7 +25,7 @@ struct ServerConfig
     std::vector<std::pair<std::string, int> >               ips_and_ports;
     std::vector<std::string>                                server_names;
     std::map<int, std::pair<std::string, std::string> >     error_pages;
-    unsigned long                                           client_max_body_size;
+    uint64_t                                                client_max_body_size;
     std::string                                             has_client_max_body_size;
     std::string                                             default_root;
     std::vector<std::string>                                default_indices;
@@ -53,7 +53,7 @@ class ConfigParser
         std::vector<ServerConfig>   _servers;
         std::vector<std::string>    cp_split(const std::string& str, char delimiter);
         std::string                 trim(const std::string& str);
-        unsigned long               str_to_unsigned_long(const std::string& s);
+        uint64_t                    str_to_unsigned_long(const std::string& s);
         void                        parseFile(const std::string& filename, ParserVariables& vars);
         void                        parseConfigFile(ParserVariables& vars);
         void                        handleOpenBracket(ParserVariables& vars);

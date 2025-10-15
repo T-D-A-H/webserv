@@ -27,7 +27,7 @@ struct ServerSocket
 	uint16_t                            _port; 
 	in_addr_t                           _host;
 	sa_family_t                         _sin_family;
-	unsigned long		                _client_max_body_size;
+	uint64_t		                    _client_max_body_size;
 	struct sockaddr_in	                _server_adress;
     std::map<std::string, Session>      _session;
 };
