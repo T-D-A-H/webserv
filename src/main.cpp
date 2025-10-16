@@ -7,10 +7,18 @@
 Servers* servers = NULL;
 Connection* conn = NULL;
 
+// Volatil es para que si recibe una señar en medio del loop, obliga al programa a leer el valor de
+// la variable directamente de la memoria y no leerla desde la cache que tenia guadardada justo antes de hacer CONTROL C
+// Entonces vuelve al loop y g_stop se habra actualizado.
+volatile sig_atomic_t g_stop = 0;
+
 void	handle_sigint(int sig) {
+	g_stop = 1;
+	(void)sig;
+}
 
-    if (conn) {
-
+int	free_all() {
+	if (conn) {
 		std::vector<int> fds_to_remove;
     	std::map<int, PollData>::iterator it = conn->getFdMap().begin();
 
@@ -31,7 +39,7 @@ void	handle_sigint(int sig) {
 		delete servers;
 		servers = NULL;
     }
-	(void)sig;
+	return (0);
 }
 
 int		main(int argc, char **argv)
@@ -47,7 +55,7 @@ int		main(int argc, char **argv)
 		conn = new Connection(*servers);
 
 		signal(SIGINT, handle_sigint);
-		while (true) {
+		while (!g_stop) {
 
 			int ready_fds = epoll_wait(conn->getEpollFd(), conn->getEpollEvents(), MAX_EVENTS, EPOLL_TIME_OUT);
 			if (ready_fds == -1) {
@@ -83,11 +91,7 @@ int		main(int argc, char **argv)
 					else if (status == RECV_COMPLETE) {
 						
 						if (!pd.client->prepareRequest() || !pd.client->checkRequest()) {
-    	        	    	if (pd.client->getHeader("Connection") != "keep-alive") {
 								conn->removeClient(pd);
-							} else {
-								pd._current_time = std::time(0);
-							}
 							continue;
 						}
 						pd._current_time = std::time(0);
@@ -109,6 +113,7 @@ int		main(int argc, char **argv)
 						pd.client->sendDeleteResponse();
 					else if (method == "HEAD")
 						pd.client->sendHeadResponse();
+					
 					if (pd.client->getHeader("Connection") != "keep-alive") {
 						close(fd);
 						conn->removeClient(pd);
@@ -127,8 +132,7 @@ int		main(int argc, char **argv)
 		handle_sigint(1);
 		std::cerr << e.what() << '\n';
 	}
-	
-	return (0);
+	return (free_all());
 }
 
 

@@ -29,7 +29,7 @@ void		HttpSend::sendGetResponse(int fd, HttpReceive& _request) {
 	oss << body;
 
 	std::string response = oss.str();
-	send(fd, response.c_str(), response.size(), 0);
+	send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 }
 
 void		HttpSend::sendPostResponse(int fd, HttpReceive& _request) {
@@ -59,7 +59,7 @@ void		HttpSend::sendPostResponse(int fd, HttpReceive& _request) {
 	oss << body;
 
 	std::string response = oss.str();
-	send(fd, response.c_str(), response.size(), 0);;
+	send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 }
 
 void		HttpSend::sendDeleteResponse(int fd, HttpReceive& _request) {
@@ -87,7 +87,7 @@ void		HttpSend::sendDeleteResponse(int fd, HttpReceive& _request) {
 	oss << body;
 
 	std::string response = oss.str();
-	send(fd, response.c_str(), response.size(), 0);
+	send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 }
 
 void		HttpSend::sendHeadResponse(int fd, HttpReceive& _request) {
@@ -116,7 +116,7 @@ void		HttpSend::sendHeadResponse(int fd, HttpReceive& _request) {
     else
 		oss << "Connection: close\r\n\r\n";
 	std::string response = oss.str();
-	send(fd, response.c_str(), response.size(), 0);
+	send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 }
 
 void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_match) {
@@ -152,7 +152,7 @@ void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_
 			oss << "Connection: close\r\n\r\n";
 	}
     response = oss.str();
-	::send(fd, response.c_str(), response.size(), 0);
+	::send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 }
 
 void		HttpSend::sendAutoResponse(int fd, HttpReceive& _request, const std::string &direction_path) {
@@ -210,7 +210,7 @@ void		HttpSend::sendAutoResponse(int fd, HttpReceive& _request, const std::strin
 		oss << "Connection: close\r\n\r\n";
 	oss << bodyStr;
 	std::string response = oss.str();
-	::send(fd, response.c_str(), response.size(), 0);
+	::send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 }
 
 void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
@@ -279,7 +279,6 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 		char *argv[] = { (char*)script_file_path.c_str(), NULL};
 		
 		if (execve(script_file_path.c_str(), argv, envp.data()) == -1) {
-
 			close(pipe_parent[0]); close(pipe_parent[1]); close(pipe_child[0]); close(pipe_child[1]);
 			std::cerr << "Child execve() failed: " << strerror(errno) << std::endl;
 			send500(fd, _request);exit(1);
@@ -332,7 +331,7 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 			oss << "Connection: close\r\n\r\n";
 
 		std::string http_response = oss.str();
-		send(_request.getFd(), http_response.c_str(), http_response.size(), 0);
+		send(_request.getFd(), http_response.c_str(), http_response.size(), MSG_NOSIGNAL);
 
 		int status;
 		waitpid(pid, &status, 0);
@@ -386,7 +385,7 @@ void        HttpSend::sendErr(int fd, HttpReceive& _request, int error_code) {
     oss << body;
 
     response = oss.str();
-    ::send(fd, response.c_str(), response.size(), 0);
+    ::send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
     ::close(fd);
 }
 

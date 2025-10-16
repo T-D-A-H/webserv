@@ -310,7 +310,6 @@ bool	HttpReceive::methodPOST(ServerWrapper &server, size_t best_match) {
 bool	HttpReceive::methodDELETE(ServerWrapper &server, size_t best_match) {
 
 	std::string path_to_delete;
-
 	if (this->_headers.find("Upload Store") != this->_headers.end()) {
 		std::string filename = this->_headers["Path"].substr(this->_headers["Path"].find_last_of("/") + 1);
 		path_to_delete = this->_headers["Upload Store"] + filename;
@@ -320,13 +319,10 @@ bool	HttpReceive::methodDELETE(ServerWrapper &server, size_t best_match) {
 
 	if (!isMethodAllowed(server, best_match, this->_headers["Method"]))
 		return (sendError(405));
-
 	if (!fileExistsAndReadable(path_to_delete.c_str(), 0))
 		return (sendError(404));
-
 	if (std::remove(path_to_delete.c_str()) != 0)
 		return (sendError(403));
-
 	return (true);
 }
 
