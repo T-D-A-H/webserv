@@ -128,19 +128,19 @@ int main(int argc, char **argv)
 						{
 							pd.has_error = true;
 							pd.client->sendOutErr(403);
-							conn->removeClient(pd);
-							continue;
 						}
+						conn->removeClient(pd);
+						continue;
 					}
-					if (pd.client->isRedirection())
+					else if (pd.client->isRedirection())
 					{
 						if (!pd.client->sendRedirectResponse())
 						{
 							pd.has_error = true;
 							pd.client->sendOutErr(302);
-							conn->removeClient(pd);
-							continue;
 						}
+						conn->removeClient(pd);
+						continue;
 					}
 					else if (pd.client->isCgiScript())
 					{
@@ -148,11 +148,13 @@ int main(int argc, char **argv)
 						{
 							pd.has_error = true;
 							pd.client->sendOutErr(500);
-							conn->removeClient(pd);
-							continue;
 						}
+						conn->removeClient(pd);
+						continue;
 					}
-					else if (method == "GET")
+
+					
+					if (method == "GET")
 						pd.client->sendGetResponse();
 					else if (method == "POST")
 						pd.client->sendPostResponse();
