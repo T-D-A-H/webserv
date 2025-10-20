@@ -221,15 +221,20 @@ bool	HttpReceive::methodHEAD(ServerWrapper &server, size_t best_match) {
 		return (sendError(405));
 
 	if (isDirectory(this->_full_path.c_str())) {
-		if (server.getAutoIndex(best_match))
-			return (sendAutoResponse(this->_full_path), true);
+		if (server.getAutoIndex(best_match)) {
+			this->_is_autoindex = true;
+			this->_autoindex_to =  this->_full_path;
+			return (true);
+		}
 		else
 			return (sendError(404));
 	}
 
-	if (this->_full_path.empty() && server.getAutoIndex(best_match))
-		return (sendAutoResponse(root), true);
-
+	if (this->_full_path.empty() && server.getAutoIndex(best_match)) {
+		this->_is_autoindex = true;
+		this->_autoindex_to = root;
+		return (true);
+	}
 	else if (this->_full_path.empty() && !server.getAutoIndex(best_match))
 		return (sendError(404));
 
@@ -247,14 +252,20 @@ bool	HttpReceive::methodGET(ServerWrapper &server, size_t best_match) {
 		return (sendError(405));
 
 	if (isDirectory(this->_full_path.c_str())) {
-		if (server.getAutoIndex(best_match))
-			return (sendAutoResponse(this->_full_path), true);
+		if (server.getAutoIndex(best_match)) {
+			this->_is_autoindex = true;
+			this->_autoindex_to = this->_full_path;
+			return (true);
+		}
 		else
 			return (sendError(404));
 	}
 
-	if (this->_full_path.empty() && server.getAutoIndex(best_match))
-		return (sendAutoResponse(root), true);
+	if (this->_full_path.empty() && server.getAutoIndex(best_match)) {
+		this->_is_autoindex = true;
+		this->_autoindex_to = root;
+		return (true);
+	}
 
 	else if (this->_full_path.empty() && !server.getAutoIndex(best_match))
 		return (sendError(404));
@@ -573,7 +584,7 @@ size_t			HttpReceive::getPostBodySize() {return (this->_body_complete.size());}
 
 std::string		HttpReceive::getPostBody() {return (this->_body_complete);}
 
-void			HttpReceive::sendAutoResponse(const std::string &direction_path) {HttpSend::sendAutoResponse(getFd(), *this, direction_path); }
+bool			HttpReceive::sendAutoResponse(const std::string &direction_path) {return HttpSend::sendAutoResponse(getFd(), *this, direction_path); }
 		
 void			HttpReceive::sendDeleteResponse() {HttpSend::sendDeleteResponse(getFd(), *this); }
 
@@ -583,9 +594,9 @@ void			HttpReceive::sendPostResponse() {HttpSend::sendPostResponse(getFd(), *thi
 
 void			HttpReceive::sendHeadResponse() {HttpSend::sendHeadResponse(getFd(), *this); }
 
-void			HttpReceive::sendCgiResponse() {HttpSend::sendCgiResponse(getFd(), *this);}
+bool			HttpReceive::sendCgiResponse() { return HttpSend::sendCgiResponse(getFd(), *this);}
 
-void			HttpReceive::sendRedirectResponse() {HttpSend::sendRedirectResponse(getFd(), *this, getBestMatch()); }
+bool			HttpReceive::sendRedirectResponse() {return HttpSend::sendRedirectResponse(getFd(), *this, getBestMatch()); }
 
 void			HttpReceive::send200Response() { HttpSend::send200(getFd(), *this); }
 

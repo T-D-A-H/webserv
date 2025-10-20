@@ -119,7 +119,7 @@ void		HttpSend::sendHeadResponse(int fd, HttpReceive& _request) {
 	send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
 }
 
-void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_match) {
+bool		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_match) {
 
 	std::string			response;
 	std::ostringstream	oss;
@@ -129,8 +129,7 @@ void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_
 	
 
 	if (url_or_loc.empty() || (!url_or_loc.empty() && error_code != 301 && error_code != 302)) {
-
-		sendErr(fd, _request, error_code);
+		return (false);
 	}
 	else if (!url_or_loc.empty() && (error_code == 301 || error_code  == 302)) {
 
@@ -153,14 +152,14 @@ void		HttpSend::sendRedirectResponse(int fd, HttpReceive& _request, size_t best_
 	}
     response = oss.str();
 	::send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
+	return (true);
 }
 
-void		HttpSend::sendAutoResponse(int fd, HttpReceive& _request, const std::string &direction_path) {
+bool		HttpSend::sendAutoResponse(int fd, HttpReceive& _request, const std::string &direction_path) {
 
 	DIR * dir = opendir(direction_path.c_str());
 	if (!dir) {
-		send403(fd, _request);
-		return ;
+		return (false);
 	}
 	std::ostringstream body;
 	body << "<html><head><title>Index of " << _request.getHeader("Path") << "</title></head><body>";
@@ -211,9 +210,10 @@ void		HttpSend::sendAutoResponse(int fd, HttpReceive& _request, const std::strin
 	oss << bodyStr;
 	std::string response = oss.str();
 	::send(fd, response.c_str(), response.size(), MSG_NOSIGNAL);
+	return (true);
 }
 
-void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
+bool			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 	
 	int		pipe_parent[2];
 	int		pipe_child[2];
@@ -221,16 +221,16 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 	
 	if (pipe(pipe_parent) == -1) {
 		std::cerr << "Parent pipe() failed: " << strerror(errno) << std::endl;
-    	send500(fd, _request); return ;
+    	return false;
 	}
 	if (pipe(pipe_child) == -1) {
 		std::cerr << "Child pipe() failed: " << strerror(errno) << std::endl;
-    	send500(fd, _request); return ;
+    	return false;
 	}
 	pid = fork();
 	if (pid < 0) {
 		std::cerr << "fork() failed: " << strerror(errno) << std::endl;
-    	send500(fd, _request); return ;
+    	return false;
 	}
 	else if (pid == 0) {
 		if (dup2(pipe_parent[0], STDIN_FILENO) == -1) {
@@ -280,7 +280,7 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 		if (execve(script_file_path.c_str(), argv, envp.data()) == -1) {
 			close(pipe_parent[0]); close(pipe_parent[1]); close(pipe_child[0]); close(pipe_child[1]);
 			std::cerr << "Child execve() failed: " << strerror(errno) << std::endl;
-			send500(fd, _request);exit(1);
+			send500(fd, _request); exit(1);
 		}
 	}
 	else {
@@ -307,7 +307,7 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 			kill(pid, SIGKILL);
 			waitpid(pid, &status, 0);
 			close(pipe_child[0]);
-			send500(fd, _request);
+			return false;
 		} else {
 			while ((n = read(pipe_child[0], buffer, sizeof(buffer))) > 0)
 				cgi_output.append(buffer, n);
@@ -350,6 +350,7 @@ void			HttpSend::sendCgiResponse(int fd, HttpReceive& _request) {
 			waitpid(pid, &status, 0);
 		}
 	}
+	return true;
 }
 
 void        HttpSend::sendErr(int fd, HttpReceive& _request, int error_code) {

@@ -103,6 +103,7 @@ void                Connection::populateClientPollData(Servers& servers, PollDat
     client_pd._current_time = client_pd._start_time;
     client_pd.client_time_out = false;
     client_pd.client_allocated = true;
+    client_pd.client_allocated = true;
     client_pd.client->setFd(client_fd); 
     this->fd_map[client_fd] = client_pd;
     logger(client_fd, CLIENT_CONNECT, 0);

@@ -1,6 +1,7 @@
 #ifndef CONNECTION_HPP
 # define CONNECTION_HPP
 
+
 #include <cstddef>
 #include <stdint.h>
 #include <sys/socket.h>
