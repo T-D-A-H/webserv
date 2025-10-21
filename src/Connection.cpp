@@ -39,7 +39,6 @@ void                Connection::addServerEpollEvent(int listen_fd) {
     ev.events = EPOLLIN;
     ev.data.fd = listen_fd;
     if (epoll_ctl(getEpollFd(), EPOLL_CTL_ADD, listen_fd, &ev) == -1) {
-
         throw (AddEpollInstanceException());
     }
 }
@@ -220,7 +219,6 @@ void    Connection::bindAndListen(ServerSocket& s_socket) {
         throw (std::runtime_error("Failed to bind to port " + oss.str()));
 	}
 	if (listen(s_socket._fd, s_socket._client_max_body_size) < 0) {
-
         close(s_socket._fd);
         throw (std::runtime_error("Failed to listen on socket."));
 	}
