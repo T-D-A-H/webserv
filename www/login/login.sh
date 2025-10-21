@@ -73,7 +73,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Hel
 <h1 class=\"title\">$safe_username's Profile</h1>
 </header>
 <main class=\"container\">
-<img src=\"avatar.png\" alt=\"Avatar\" class=\"avatar\">
+<img src=\"images/avatar.png\" alt=\"Avatar\" class=\"avatar\">
 <p class=\"info\"><strong>Username:</strong> $safe_username</p>
 <p class=\"info\"><strong>Password:</strong> $safe_password</p>
 </main>
