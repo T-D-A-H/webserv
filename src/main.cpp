@@ -42,7 +42,6 @@ int free_all()
 			else
 				conn->removeClient(pd);
 		}
-		close(conn->getEpollFd());
 		delete conn;
 		conn = NULL;
 	}
