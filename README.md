@@ -54,7 +54,9 @@ Prints detailed runtime events:
 - Server and client connections/disconnections  
 - Timeouts  
 - Requests and responses  
-- Signals received  
+- Signals received
+<img width="1114" height="174" alt="Screenshot from 2025-11-11 17-21-48" src="https://github.com/user-attachments/assets/59c6c259-7ebf-49f8-a87b-046ffa214d2d" />
+
 
 Color-coded output improves readability during testing.
 
@@ -64,20 +66,40 @@ The server handles script output, detects execution errors, and prevents infinit
 Scripts can be any interpreter-supported language with a valid shebang, as long as the extension is allowed in the config.
 
 ### Cookies
-Cookie detection and responses are supported.  
+Cookie detection and responses are supported.
 The browser handles most cookie logic, while the server can send and recognize client cookies.
+
+<img width="3832" height="1987" alt="Screenshot from 2025-11-11 17-16-23" src="https://github.com/user-attachments/assets/cb6615e7-226c-40c0-aeb5-421eacf8eebd" />
 
 ### Static Website and Testing
 A static website is included to test:
 - File uploads via POST  
 - Form submissions returning dynamic responses  
 - CGI script execution (including long or infinite loops)  
-- Redirects and autoindex pages  
+- Redirects and autoindex pages
+
+1. Clone the repository:
+``` bash
+git clone https://github.com/T-D-A-H/webserv.git
+cd webserv
+```
+
+2. Compile the project:
+``` bash
+make
+```
+
+3. Run the server with the default configuration file:
+``` bash
+./webserv webserv.conf
+```
 
 The server correctly serves static content, uploaded files, and dynamically generated responses.
 
+<img width="3832" height="1987" alt="Screenshot from 2025-11-11 17-14-50" src="https://github.com/user-attachments/assets/2bfcde69-0c0c-4d31-a1aa-d6248e07f661" />
+
 ### Performance
-Tested using **siege** under heavy load:
+Tested using `siege` under heavy load:
 - 1,000,000 requests on empty pages → **100% response rate**
 - Large payloads (file uploads) handled smoothly  
 
