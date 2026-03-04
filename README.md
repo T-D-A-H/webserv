@@ -230,7 +230,7 @@ Tested with `siege` under heavy load on Linux.
 
 | Login | GitHub |
 |---|---|
-| ctommasi | [@vikingokvist](https://github.com/vikingokvist) |
+| ctommasi | [@cristommasi](https://github.com/cristommasi) |
 | jaimesan | [@Ja1m3st](https://github.com/Ja1m3st) |
 
 ---
